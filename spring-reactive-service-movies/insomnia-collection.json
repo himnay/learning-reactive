@@ -1,0 +1,84 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-06-13",
+  "__export_source": "insomnia.desktop.app:v9",
+  "resources": [
+    {
+      "_id": "wrk_movies_service",
+      "_type": "workspace",
+      "name": "Spring Reactive — Movies Service",
+      "description": "Endpoints for the reactive movies aggregation service (port 8082)",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_local",
+      "_type": "environment",
+      "parentId": "wrk_movies_service",
+      "name": "Local",
+      "data": {
+        "base_url": "http://localhost:8082"
+      }
+    },
+    {
+      "_id": "fld_movies",
+      "_type": "request_group",
+      "parentId": "wrk_movies_service",
+      "name": "Movies"
+    },
+    {
+      "_id": "req_get_movie_by_id",
+      "_type": "request",
+      "parentId": "fld_movies",
+      "name": "GET Movie by ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/movies/abc",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ],
+      "description": "Aggregates MovieInfo and Reviews for the given movie ID."
+    },
+    {
+      "_id": "req_get_movie_stream",
+      "_type": "request",
+      "parentId": "fld_movies",
+      "name": "GET Movie Info Stream (NDJSON)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/v1/movies/stream",
+      "headers": [
+        { "name": "Accept", "value": "application/x-ndjson" }
+      ],
+      "description": "Server-Sent stream of MovieInfo events. Streams indefinitely — cancel to stop."
+    },
+    {
+      "_id": "fld_actuator",
+      "_type": "request_group",
+      "parentId": "wrk_movies_service",
+      "name": "Actuator"
+    },
+    {
+      "_id": "req_health",
+      "_type": "request",
+      "parentId": "fld_actuator",
+      "name": "Health",
+      "method": "GET",
+      "url": "{{ _.base_url }}/actuator/health"
+    },
+    {
+      "_id": "req_info",
+      "_type": "request",
+      "parentId": "fld_actuator",
+      "name": "Info",
+      "method": "GET",
+      "url": "{{ _.base_url }}/actuator/info"
+    },
+    {
+      "_id": "req_prometheus",
+      "_type": "request",
+      "parentId": "fld_actuator",
+      "name": "Prometheus Metrics",
+      "method": "GET",
+      "url": "{{ _.base_url }}/actuator/prometheus"
+    }
+  ]
+}

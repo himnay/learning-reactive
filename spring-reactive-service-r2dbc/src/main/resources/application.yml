@@ -1,0 +1,36 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: spring-reactive-service-r2dbc
+  r2dbc:
+    url: r2dbc:postgresql://${POSTGRES_HOST:localhost}:5432/r2dbc_demo
+    username: admin
+    password: admin
+  sql:
+    init:
+      mode: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Reactive PostgreSQL service — R2DBC, TransactionalOperator, bulk inserts
+    version: 0.0.1-SNAPSHOT
+
+logging:
+  level:
+    com.reactivespring: INFO
+    org.springframework.r2dbc: DEBUG

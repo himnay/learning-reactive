@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: spring-reactive-service-info
+  profiles:
+    active: local
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: local
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Reactive Movie Info CRUD service with MongoDB and SSE streaming
+    version: 0.0.1-SNAPSHOT
+
+logging:
+  level:
+    com.reactivespring: INFO

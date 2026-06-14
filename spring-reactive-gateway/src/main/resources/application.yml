@@ -1,0 +1,152 @@
+server:
+  port: 8765
+
+spring:
+  application:
+    name: spring-reactive-gateway
+  profiles:
+    active: local
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+  cloud:
+    gateway:
+      httpclient:
+        wiretap: true
+        connect-timeout: 1000
+        response-timeout: 5s
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: [GET, POST, PUT, DELETE, OPTIONS, PATCH]
+            allowedHeaders: "*"
+            exposedHeaders: [X-Correlation-Id, X-Response-Time-Ms, X-Request-Id]
+
+      default-filters:
+        - AddResponseHeader=X-Powered-By, Spring-Cloud-Gateway
+        - SecureHeaders
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 10
+            redis-rate-limiter.burstCapacity: 20
+            redis-rate-limiter.requestedTokens: 1
+            key-resolver: "#{@userKeyResolver}"
+
+      routes:
+        - id: movie-info-sse
+          uri: ${services.info-url:http://localhost:8080}
+          predicates:
+            - Path=/v1/movieInfoStream
+          filters:
+            - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
+
+        - id: movie-review-sse
+          uri: ${services.review-url:http://localhost:8081}
+          predicates:
+            - Path=/v1/reviewsStream
+          filters:
+            - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
+
+        # Canary routing: 20% traffic to v2 (new version on port 8083)
+        - id: movie-info-canary-v2
+          uri: ${services.info-url-v2:http://localhost:8083}
+          predicates:
+            - Path=/v1/movieInfo/**
+            - Weight=movie-info-group, 20
+          filters:
+            - AddRequestHeader=X-Canary, true
+
+        # Stable routing: 80% traffic to production (port 8080)
+        - id: movie-info-stable
+          uri: ${services.info-url:http://localhost:8080}
+          predicates:
+            - Path=/v1/movieInfo/**
+            - Weight=movie-info-group, 80
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+services:
+  info-url: http://localhost:8080
+  review-url: http://localhost:8081
+  movies-url: http://localhost:8082
+
+security:
+  jwt:
+    secret: default-learning-secret-key-min-256-bits-padding1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      movieInfoCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+      reviewsCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+      moviesCB:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+  timelimiter:
+    instances:
+      movieInfoCB:
+        timeoutDuration: 5s
+      reviewsCB:
+        timeoutDuration: 5s
+      moviesCB:
+        timeoutDuration: 10s
+  bulkhead:
+    instances:
+      movieInfoBH:
+        maxConcurrentCalls: 10
+        maxWaitDuration: 0ms
+      reviewsBH:
+        maxConcurrentCalls: 10
+        maxWaitDuration: 0ms
+  thread-pool-bulkhead:
+    instances:
+      moviesBH:
+        maxThreadPoolSize: 4
+        coreThreadPoolSize: 2
+        queueCapacity: 2
+
+logging:
+  level:
+    com.reactivespring: INFO
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: WARN
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Reactive API Gateway routing all external traffic to backend services
+    version: 0.0.1-SNAPSHOT

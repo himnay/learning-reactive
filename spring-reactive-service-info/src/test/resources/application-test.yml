@@ -1,0 +1,12 @@
+# MongoDB host/port come from Testcontainers @ServiceConnection at runtime.
+# Override 'local' database (MongoDB's local DB blocks retryable writes).
+spring:
+  data:
+    mongodb:
+      database: movieinfotest
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

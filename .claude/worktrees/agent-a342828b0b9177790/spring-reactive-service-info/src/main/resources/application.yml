@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: spring-reactive-service-info
+  profiles:
+    active: local
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://admin:admin@localhost:27017/learning_reactive?authSource=admin}
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    com.reactivespring: INFO

@@ -1,0 +1,15 @@
+server:
+  port: 8082
+
+spring:
+  profiles:
+    active: local
+
+movies:
+  url:
+    movieInfo: http://localhost:8080
+    reviews: http://localhost:8081
+
+#logging:
+#  level:
+#    root: debug

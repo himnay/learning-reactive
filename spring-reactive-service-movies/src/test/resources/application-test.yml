@@ -1,0 +1,10 @@
+movies:
+  url:
+    movieInfo: http://localhost:8084/v1/movieInfo
+    reviews: http://localhost:8084/v1/reviews
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

@@ -1,0 +1,5 @@
+rootProject.name = 'learning-reactive'
+include 'learning-reactor-core'
+include 'movies-service'
+include 'movies-info-service'
+include 'movies-review-service'
