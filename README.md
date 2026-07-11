@@ -1,5 +1,7 @@
 # Learning Reactive — Spring WebFlux & Project Reactor
 
+<img src="image/reactor-logo.png" alt="Project Reactor" width="90"/>
+
 A production-grade, multi-module learning platform that explores every dimension of reactive programming on the JVM — from raw Reactor operators, through reactive MongoDB and R2DBC/PostgreSQL persistence, Redis caching, a transactional outbox, WebSocket and SSE streaming, all the way to a Spring Cloud Gateway with JWT auth, Redis-backed rate limiting, canary routing, circuit breakers, and Testcontainers-backed integration tests.
 
 ---
