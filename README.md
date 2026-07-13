@@ -162,6 +162,7 @@ Project Reactor is Pivotal's (now VMware/Broadcom's) implementation of Reactive 
 ### Mono\<T\>
 
 `Mono<T>` is a Publisher that emits **0 or 1 items** then completes (or errors). Use it for:
+
 <ul>
 
 - A single database lookup by ID
@@ -179,6 +180,7 @@ Mono<Void>     deleted = repository.deleteById("abc123");
 ### Flux\<T\>
 
 `Flux<T>` is a Publisher that emits **0 to N items** then completes (or errors). Use it for:
+
 <ul>
 
 - Returning a list of database documents
@@ -489,6 +491,7 @@ Mono.zip(
 **Port:** 8082
 
 **Error handling in WebClient:**
+
 <ul>
 
 - `onStatus(4xx)` → typed `MoviesInfoClientException` / `ReviewsClientException`
@@ -677,6 +680,7 @@ Response:                  GlobalLoggingFilter.doOnSuccess ← PostFilter ← DO
 ### Hybrid Route Definition
 
 Routes are split across two mechanisms:
+
 <ul>
 
 - **Programmatic** (`GatewayRoutesConfig.java`) for routes requiring type-safe filter config (circuit breakers, typed retry)
@@ -959,6 +963,7 @@ Both sets of routes are merged at startup — Spring Cloud Gateway treats them a
 #### GlobalFilter — `GlobalLoggingFilter`
 
 Applied to **every** request. Runs at `HIGHEST_PRECEDENCE`. Responsibilities:
+
 <ul>
 
 - Read `X-Correlation-Id` from request; if absent, generate a UUID
@@ -990,6 +995,7 @@ PostFilterGatewayFilterFactory →  name: PostFilter in YAML
 ```
 
 **PreFilter** (before downstream call):
+
 <ul>
 
 - Stamps `X-Gateway-Version: 1.0` on the outgoing request
@@ -998,6 +1004,7 @@ PostFilterGatewayFilterFactory →  name: PostFilter in YAML
 </ul>
 
 **PostFilter** (after downstream response):
+
 <ul>
 
 - Reads `X-Request-Start` from request headers
@@ -1038,6 +1045,7 @@ public class RequestIdWebFilter implements WebFilter {
 ```
 
 Two details worth calling out:
+
 <ul>
 
 - **`@Order` arithmetic as documentation.** `RequestIdWebFilter` is `HIGHEST_PRECEDENCE - 1`, `GlobalLoggingFilter` is `HIGHEST_PRECEDENCE`, and `JwtAuthenticationWebFilter` is `HIGHEST_PRECEDENCE + 10`. The gaps are deliberate — they read as "request id, then logging, then auth, with room to insert filters in between without renumbering everything."
@@ -1531,6 +1539,7 @@ class MovieInfoControllerInt {
 `@ServiceConnection` automatically configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB. No hardcoded ports in config files needed. The test uses a named database (`movieinfotest`) configured in `src/test/resources/application.yml` to avoid touching the production `local` database.
 
 **macOS Docker Desktop requirements** (configured in root `pom.xml` Surefire):
+
 <ul>
 
 - `DOCKER_HOST=unix:///~/.docker/run/docker.sock` — Docker Desktop 4.x uses a non-standard socket path
