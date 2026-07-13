@@ -34,7 +34,8 @@ A production-grade, multi-module learning platform that explores every dimension
 
 ---
 
-## 1. What This Project Is
+<a id="1-what-this-project-is"></a>
+## 1. 🔹 What This Project Is
 
 This repository is a deliberate, end-to-end study of reactive programming in the Spring ecosystem. It is not a toy demo — every piece is production-grade: validation, global exception handling, circuit breakers, retry with exponential backoff, SSE streaming, Testcontainers integration tests, WireMock contract tests, Prometheus metrics, and a reactive API gateway.
 
@@ -82,7 +83,8 @@ flowchart TB
 
 ---
 
-## 2. Why Reactive Programming Exists
+<a id="2-why-reactive-programming-exists"></a>
+## 2. 🧵 Why Reactive Programming Exists
 
 ### The Problem with Blocking I/O
 
@@ -128,7 +130,8 @@ The same 8 cores handle thousands of concurrent connections. Threads are never i
 
 ---
 
-## 3. The Reactive Streams Specification
+<a id="3-the-reactive-streams-specification"></a>
+## 3. 📨 The Reactive Streams Specification
 
 Reactive Streams (`org.reactivestreams`) is a JVM specification (not an implementation) that defines four interfaces:
 
@@ -147,7 +150,8 @@ The spec defines interoperability. Project Reactor, RxJava, Akka Streams, and Ve
 
 ---
 
-## 4. Project Reactor — Mono and Flux
+<a id="4-project-reactor--mono-and-flux"></a>
+## 4. 🧵 Project Reactor — Mono and Flux
 
 Project Reactor is Pivotal's (now VMware/Broadcom's) implementation of Reactive Streams. It is the reactive library that Spring WebFlux is built on.
 
@@ -259,7 +263,8 @@ In Spring WebFlux, the framework subscribes on your behalf when you return a `Mo
 
 ---
 
-## 5. System Architecture
+<a id="5-system-architecture"></a>
+## 5. 🏗️ System Architecture
 
 ### Runtime Topology
 
@@ -337,7 +342,8 @@ Note that the two downstream calls in `MoviesController` are shown here as concu
 
 ---
 
-## 6. Module Breakdown
+<a id="6-module-breakdown"></a>
+## 6. 🏗️ Module Breakdown
 
 ### Module 1: `non-spring-reactive-reactor-core`
 
@@ -544,7 +550,8 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 
 ---
 
-## 7. Technology Stack
+<a id="7-technology-stack"></a>
+## 7. 🧰 Technology Stack
 
 | Technology | Version | Role |
 |---|---|---|
@@ -570,7 +577,8 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 
 ---
 
-## 8. Design Patterns in Use
+<a id="8-design-patterns-in-use"></a>
+## 8. 🏗️ Design Patterns in Use
 
 ### Publisher–Subscriber
 
@@ -652,7 +660,8 @@ Both sets of routes are merged by Spring Cloud Gateway at startup.
 
 ---
 
-## 9. Spring WebFlux Deep Dive
+<a id="9-spring-webflux-deep-dive"></a>
+## 9. 🧵 Spring WebFlux Deep Dive
 
 ### The Two Programming Models
 
@@ -722,7 +731,8 @@ Mono.fromCallable(() -> legacyBlockingService.call())
 
 ---
 
-## 10. Server-Sent Events and Sinks
+<a id="10-server-sent-events-and-sinks"></a>
+## 10. 🔹 Server-Sent Events and Sinks
 
 ### What is SSE?
 
@@ -783,7 +793,8 @@ SSE routes (`/v1/movieInfoStream`, `/v1/reviewsStream`) are in YAML without circ
 
 ---
 
-## 11. WebClient — Reactive HTTP
+<a id="11-webclient--reactive-http"></a>
+## 11. 🧵 WebClient — Reactive HTTP
 
 `WebClient` is the reactive replacement for `RestTemplate`. Every method in the fluent API returns a `Mono` or `Flux` — the HTTP call does not start until subscription.
 
@@ -841,7 +852,8 @@ To see wiretap logs: set `logging.level.reactor.netty: DEBUG` in `application.ym
 
 ---
 
-## 12. Spring Cloud Gateway
+<a id="12-spring-cloud-gateway"></a>
+## 12. ☁️ Spring Cloud Gateway
 
 ### What the Gateway Does
 
@@ -1045,7 +1057,8 @@ The `Weight` predicate assigns each request a pseudo-random bucket at request ti
 
 ---
 
-## 13. Resilience Patterns
+<a id="13-resilience-patterns"></a>
+## 13. 🛡️ Resilience Patterns
 
 ### Circuit Breaker States
 
@@ -1120,7 +1133,8 @@ resilience4j:
 
 ---
 
-## 14. Reactive Persistence — MongoDB and R2DBC/PostgreSQL
+<a id="14-reactive-persistence--mongodb-and-r2dbcpostgresql"></a>
+## 14. 🗄️ Reactive Persistence — MongoDB and R2DBC/PostgreSQL
 
 ### Why Reactive MongoDB
 
@@ -1206,7 +1220,8 @@ Because the transaction context rides along in `Context` rather than a thread, `
 
 ---
 
-## 15. Reactive Caching with Redis
+<a id="15-reactive-caching-with-redis"></a>
+## 15. ⚡ Reactive Caching with Redis
 
 ### Cache-Aside, Non-Blocking End to End
 
@@ -1261,7 +1276,8 @@ Cached entries expire automatically after a 10-minute TTL (`Duration.ofMinutes(1
 
 ---
 
-## 16. Transactional Outbox Pattern
+<a id="16-transactional-outbox-pattern"></a>
+## 16. 🧩 Transactional Outbox Pattern
 
 ### The Dual-Write Problem
 
@@ -1311,7 +1327,8 @@ Because the outbox row is written to the *same* database as the domain data (not
 
 ---
 
-## 17. Reactive WebSocket
+<a id="17-reactive-websocket"></a>
+## 17. 🧵 Reactive WebSocket
 
 ### WebSocket vs. SSE
 
@@ -1360,7 +1377,8 @@ Every connected session shares one `messageSink`. When any client sends a messag
 
 ---
 
-## 18. Validation and Error Handling
+<a id="18-validation-and-error-handling"></a>
+## 18. ⚠️ Validation and Error Handling
 
 ### Bean Validation (`@RestController` style)
 
@@ -1406,7 +1424,8 @@ repository.findById(id)
 
 ---
 
-## 19. Testing Strategy
+<a id="19-testing-strategy"></a>
+## 19. 🧪 Testing Strategy
 
 ### Layer 1: Unit Tests — Pure Reactor (`StepVerifier`)
 
@@ -1490,7 +1509,8 @@ This tests the WebClient error handling, retry logic, and aggregation without ne
 
 ---
 
-## 20. API Reference
+<a id="20-api-reference"></a>
+## 20. 📚 API Reference
 
 ### Gateway Entry Point: `http://localhost:8765`
 
@@ -1609,7 +1629,8 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ---
 
-## 21. Running the Project
+<a id="21-running-the-project"></a>
+## 21. 🚀 Running the Project
 
 ### Prerequisites
 
@@ -1730,7 +1751,8 @@ curl -s -X POST http://localhost:8083/v1/genres/batch \
 
 ---
 
-## 22. Pros and Cons of Reactive Programming
+<a id="22-pros-and-cons-of-reactive-programming"></a>
+## 22. 🧵 Pros and Cons of Reactive Programming
 
 ### Advantages
 
@@ -1808,7 +1830,8 @@ Thread-local values (MDC logging context, Spring Security `SecurityContextHolder
 
 ---
 
-## 23. Key Learning Takeaways
+<a id="23-key-learning-takeaways"></a>
+## 23. 🔹 Key Learning Takeaways
 
 This project was built to cement specific reactive concepts through working code. The table below maps each concept to exactly where it lives in the codebase:
 
