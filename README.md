@@ -123,10 +123,14 @@ The same 8 cores handle thousands of concurrent connections. Threads are never i
 
 ### When Reactive Does NOT Win
 
+<ul>
+
 - CPU-bound work (image processing, heavy computation) — threads are busy computing anyway; non-blocking offers no advantage
 - Simple CRUD with low concurrency — the complexity cost exceeds the benefit
 - Teams unfamiliar with functional programming — steep learning curve with debugging difficulties
 - Legacy libraries that block internally — mixing blocking code into reactive pipelines causes deadlocks on the small event-loop thread pool
+
+</ul>
 
 ---
 
@@ -158,9 +162,13 @@ Project Reactor is Pivotal's (now VMware/Broadcom's) implementation of Reactive 
 ### Mono\<T\>
 
 `Mono<T>` is a Publisher that emits **0 or 1 items** then completes (or errors). Use it for:
+<ul>
+
 - A single database lookup by ID
 - A single HTTP GET that returns one object
 - Any async operation that has at most one result
+
+</ul>
 
 ```java
 Mono<String> greeting = Mono.just("Hello World");
@@ -171,9 +179,13 @@ Mono<Void>     deleted = repository.deleteById("abc123");
 ### Flux\<T\>
 
 `Flux<T>` is a Publisher that emits **0 to N items** then completes (or errors). Use it for:
+<ul>
+
 - Returning a list of database documents
 - Streaming events (SSE)
 - Processing a collection item by item in a pipeline
+
+</ul>
 
 ```java
 Flux<String> names    = Flux.just("Alice", "Bob", "Carol");
@@ -351,9 +363,13 @@ Note that the two downstream calls in `MoviesController` are shown here as concu
 
 **Key classes:**
 
+<ul>
+
 - `FluxFlow` — 9 operators: `map`, `filter`, `flatMap`, `concatMap`, `transform`, `defaultIfEmpty`, `switchIfEmpty`, with and without `delayElements`
 - `MonoFlow` — `map`, `flatMap`, `flatMapMany`, `defaultIfEmpty`, `switchIfEmpty`
 - `CombineMonoFlux` — stream combination: `concat`, `concatWith`, `merge`, `mergeWith`, `mergeSequential`, `zip`, `zipWith` on both Mono and Flux
+
+</ul>
 
 **Critical lesson:** `flatMap` with `delayElements` produces interleaved (non-ordered) output because it subscribes to all inner publishers concurrently. `concatMap` preserves order because it subscribes to inner publishers one at a time.
 
@@ -397,11 +413,15 @@ public record MovieInfoDocument(
 
 The info service is the most feature-dense module in the repo — beyond basic CRUD it also demonstrates four additional reactive patterns, each covered in depth in its own section later in this document:
 
+<ul>
+
 - **Reactive caching (cache-aside) with Redis** — `cache/MovieInfoCacheService` wraps a `ReactiveRedisTemplate<String, MovieInfoDocument>` and implements a non-blocking cache-aside pattern (`get` → on miss, `loader` → `set` with a 10-minute TTL). See [§15](#15-reactive-caching-with-redis).
 - **Transactional Outbox pattern** — `outbox/OutboxService`, `OutboxEvent`, and `OutboxRepository` persist domain events as `PENDING` and relay them on a `@Scheduled` fixed-delay loop, avoiding the dual-write problem between the database and a message broker. See [§16](#16-transactional-outbox-pattern).
 - **Reactive WebSocket** — `websocket/MovieInfoWebSocketHandler` implements `WebSocketHandler` directly (not SSE) using a multicast `Sinks.Many<String>` to broadcast every inbound client message to all connected sessions. See [§17](#17-reactive-websocket).
 - **MongoDB field projections** — `projection/MovieInfoProjectionRepository` uses `@Query(fields = ...)` to return a slim `MovieSummary` record instead of the full `MovieInfoDocument`, a lightweight CQRS-style read model for list views.
 - **Reactor Context → MDC bridging** — `util/ReactiveLogger` shows the correct (and only safe) way to get correlation data into SLF4J's `MDC` from a reactive pipeline: read it out of `Mono.deferContextual`, `MDC.put` synchronously, log, then `MDC.remove` in the same synchronous block — never leaving it set across a thread hop.
+
+</ul>
 
 ---
 
@@ -469,9 +489,13 @@ Mono.zip(
 **Port:** 8082
 
 **Error handling in WebClient:**
+<ul>
+
 - `onStatus(4xx)` → typed `MoviesInfoClientException` / `ReviewsClientException`
 - `onStatus(5xx)` → `MoviesInfoServerException` / `ReviewsServerException`
 - `retryWhen(Retry.backoff(3, 1s).filter(MoviesInfoServerException))` — retry only server errors with exponential backoff (1s, 2s, 4s); give up after 3 attempts
+
+</ul>
 
 ---
 
@@ -653,8 +677,12 @@ Response:                  GlobalLoggingFilter.doOnSuccess ← PostFilter ← DO
 ### Hybrid Route Definition
 
 Routes are split across two mechanisms:
+<ul>
+
 - **Programmatic** (`GatewayRoutesConfig.java`) for routes requiring type-safe filter config (circuit breakers, typed retry)
 - **Declarative YAML** (`application.yml`) for simpler SSE stream routes where named `GatewayFilterFactory` beans are sufficient
+
+</ul>
 
 Both sets of routes are merged by Spring Cloud Gateway at startup.
 
@@ -931,10 +959,14 @@ Both sets of routes are merged at startup — Spring Cloud Gateway treats them a
 #### GlobalFilter — `GlobalLoggingFilter`
 
 Applied to **every** request. Runs at `HIGHEST_PRECEDENCE`. Responsibilities:
+<ul>
+
 - Read `X-Correlation-Id` from request; if absent, generate a UUID
 - Stamp it onto the outgoing request header (propagated to downstream services)
 - Log `→ METHOD PATH correlationId=...` before forwarding
 - After downstream returns: stamp `X-Correlation-Id` onto the response, log `← STATUS PATH ms correlationId=...`
+
+</ul>
 
 ```java
 @Component
@@ -958,13 +990,21 @@ PostFilterGatewayFilterFactory →  name: PostFilter in YAML
 ```
 
 **PreFilter** (before downstream call):
+<ul>
+
 - Stamps `X-Gateway-Version: 1.0` on the outgoing request
 - Records `X-Request-Start: <epoch-ms>` for timing (read by PostFilter)
 
+</ul>
+
 **PostFilter** (after downstream response):
+<ul>
+
 - Reads `X-Request-Start` from request headers
 - Computes elapsed milliseconds
 - Adds `X-Response-Time-Ms: <ms>` to the response headers
+
+</ul>
 
 #### Built-in Shortcut Filters
 
@@ -998,8 +1038,12 @@ public class RequestIdWebFilter implements WebFilter {
 ```
 
 Two details worth calling out:
+<ul>
+
 - **`@Order` arithmetic as documentation.** `RequestIdWebFilter` is `HIGHEST_PRECEDENCE - 1`, `GlobalLoggingFilter` is `HIGHEST_PRECEDENCE`, and `JwtAuthenticationWebFilter` is `HIGHEST_PRECEDENCE + 10`. The gaps are deliberate — they read as "request id, then logging, then auth, with room to insert filters in between without renumbering everything."
 - **`.contextWrite(ctx -> ctx.put("requestId", requestId))`** puts the id into the *Reactor* `Context`, not just the HTTP header. Any operator further down the same reactive chain can retrieve it via `Mono.deferContextual(ctx -> ...)` even though it never touches the `ServerWebExchange` directly — this is the same pattern `util/ReactiveLogger` in the info service uses to bridge Reactor `Context` into SLF4J `MDC` (see the [Module 2 breakdown](#module-2-spring-reactive-service-info) in §6).
+
+</ul>
 
 `JwtAuthenticationWebFilter` validates the `Authorization: Bearer <token>` header for every path except `/actuator/**`, `/fallback/**`, and `/v1/public/**`. A missing/malformed header or an invalid/expired token short-circuits the chain with `401 Unauthorized` by calling `exchange.getResponse().setComplete()` directly — the request never reaches route matching, so it never counts toward a circuit breaker's failure rate. On success, the filter mutates the request to add `X-User-Id` (the JWT's subject claim) before calling `chain.filter(mutatedExchange)`, so every downstream filter and backend service can trust the caller's identity without re-parsing or re-validating the token.
 
@@ -1487,9 +1531,13 @@ class MovieInfoControllerInt {
 `@ServiceConnection` automatically configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB. No hardcoded ports in config files needed. The test uses a named database (`movieinfotest`) configured in `src/test/resources/application.yml` to avoid touching the production `local` database.
 
 **macOS Docker Desktop requirements** (configured in root `pom.xml` Surefire):
+<ul>
+
 - `DOCKER_HOST=unix:///~/.docker/run/docker.sock` — Docker Desktop 4.x uses a non-standard socket path
 - `-Dapi.version=1.41` — docker-java shaded inside Testcontainers reads this JVM property to set the Docker API version (Docker Desktop 4.x requires ≥1.40)
 - `-Dnet.bytebuddy.experimental=true` — Mockito's ByteBuddy does not yet officially support Java 25 class version 69
+
+</ul>
 
 ### Layer 4: WireMock Contract Tests (movies service)
 
@@ -1634,9 +1682,13 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### Prerequisites
 
+<ul>
+
 - Java 25 (`JAVA_HOME` must point to JDK 25)
 - Maven 3.9+
 - Docker (for MongoDB, Redis, and PostgreSQL via `docker-compose.yml`, and for Testcontainers-backed integration tests)
+
+</ul>
 
 ### Start Infrastructure with Docker Compose
 
@@ -1804,9 +1856,13 @@ One blocking call (`Thread.sleep`, blocking JDBC query, reading a `BlockingQueue
 
 **5. Not appropriate for all workloads**
 
+<ul>
+
 - CPU-bound tasks (image compression, ML inference) get no benefit from reactive I/O
 - Simple internal tools with low concurrency add complexity with no payoff
 - Services where most latency is in computation (not I/O) will not improve throughput
+
+</ul>
 
 **6. Reactive-all-the-way requirement**
 
