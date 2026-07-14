@@ -1,0 +1,226 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-07-14T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v12.0.0",
+  "resources": [
+    {
+      "_id": "wrk_learning_0000000000000000000000000001",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "learning-reactive :: REST",
+      "scope": "collection",
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "env_learning_0000000000000000000000000002",
+      "_type": "environment",
+      "parentId": "wrk_learning_0000000000000000000000000001",
+      "name": "Base Environment",
+      "data": {
+        "host": "localhost"
+      },
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "fld_learning_0000000000000000000000000003",
+      "_type": "request_group",
+      "parentId": "wrk_learning_0000000000000000000000000001",
+      "name": "spring-reactive-gateway (:8765)",
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000004",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000003",
+      "name": "GET /fallback/movieInfo",
+      "method": "GET",
+      "url": "http://{{ _.host }}:8765/fallback/movieInfo",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 0,
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000005",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000003",
+      "name": "GET /fallback/movies",
+      "method": "GET",
+      "url": "http://{{ _.host }}:8765/fallback/movies",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 100,
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000006",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000003",
+      "name": "GET /fallback/reviews",
+      "method": "GET",
+      "url": "http://{{ _.host }}:8765/fallback/reviews",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 200,
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "fld_learning_0000000000000000000000000007",
+      "_type": "request_group",
+      "parentId": "wrk_learning_0000000000000000000000000001",
+      "name": "spring-reactive-service-r2dbc (:8083)",
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000008",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000007",
+      "name": "DELETE /v1/genres/{id}",
+      "method": "DELETE",
+      "url": "http://{{ _.host }}:8083/v1/genres/<id>",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 0,
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000009",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000007",
+      "name": "GET /v1/genres",
+      "method": "GET",
+      "url": "http://{{ _.host }}:8083/v1/genres",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 100,
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000010",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000007",
+      "name": "GET /v1/genres/search",
+      "method": "GET",
+      "url": "http://{{ _.host }}:8083/v1/genres/search",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 200,
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000011",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000007",
+      "name": "GET /v1/genres/{id}",
+      "method": "GET",
+      "url": "http://{{ _.host }}:8083/v1/genres/<id>",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 300,
+      "created": 1784063187842,
+      "modified": 1784063187842
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000012",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000007",
+      "name": "POST /v1/genres",
+      "method": "POST",
+      "url": "http://{{ _.host }}:8083/v1/genres",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 400,
+      "created": 1784063187842,
+      "modified": 1784063187842,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \n}"
+      }
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000013",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000007",
+      "name": "POST /v1/genres/batch",
+      "method": "POST",
+      "url": "http://{{ _.host }}:8083/v1/genres/batch",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 500,
+      "created": 1784063187842,
+      "modified": 1784063187842,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \n}"
+      }
+    },
+    {
+      "_id": "req_learning_0000000000000000000000000014",
+      "_type": "request",
+      "parentId": "fld_learning_0000000000000000000000000007",
+      "name": "PUT /v1/genres/{id}",
+      "method": "PUT",
+      "url": "http://{{ _.host }}:8083/v1/genres/<id>",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 600,
+      "created": 1784063187842,
+      "modified": 1784063187842,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \n}"
+      }
+    }
+  ]
+}

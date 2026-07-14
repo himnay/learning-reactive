@@ -11,12 +11,10 @@ spring:
   config:
     activate:
       on-profile: local
-  data:
-    mongodb:
-      host: localhost
-      port: 27017
-      database: local
-
+  mongodb:
+    host: localhost
+    port: 27017
+    database: local
 management:
   endpoints:
     web:

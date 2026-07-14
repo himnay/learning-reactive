@@ -2,13 +2,11 @@
 # MongoDB host/port come from Testcontainers @ServiceConnection at runtime;
 # we only need to override the database name so tests don't hit the 'local' namespace
 # which blocks retryable writes on standalone (non-replicated) MongoDB.
-spring:
-  data:
-    mongodb:
-      database: reviewtest
-
 management:
   endpoints:
     web:
       exposure:
         include: health
+spring:
+  mongodb:
+    database: reviewtest
