@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
+import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataMongoTest
 @Testcontainers
-public class ReviewRepositoryInt {
+class ReviewRepositoryInt {
 
     @Container
     @ServiceConnection
@@ -29,7 +29,7 @@ public class ReviewRepositoryInt {
     private ReviewRepository reviewRepository;
 
     @BeforeEach
-    public void init() {
+    void init() {
         var reviewInfos = List.of(
                 new ReviewDocument(null, 1L, "awesome movie", 9.0),
                 new ReviewDocument(null, 2L, "awesome movie", 9.0),
@@ -39,13 +39,13 @@ public class ReviewRepositoryInt {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         reviewRepository.deleteAll().block();
     }
 
     @Test
     @DisplayName("find all reviews")
-    public void findAllMovieInfoTest() {
+    void findAllMovieInfoTest() {
         StepVerifier.create(reviewRepository.findAll().log())
                 .expectNextCount(3)
                 .verifyComplete();
@@ -53,7 +53,7 @@ public class ReviewRepositoryInt {
 
     @Test
     @DisplayName("find a single review by id")
-    public void findAMovieInfoTest() {
+    void findAMovieInfoTest() {
         StepVerifier.create(reviewRepository.findById("abc").log())
                 .assertNext(doc -> assertThat(doc.reviewId()).isEqualTo("abc"))
                 .verifyComplete();
@@ -61,7 +61,7 @@ public class ReviewRepositoryInt {
 
     @Test
     @DisplayName("delete a single review")
-    public void deleteMovieInfoTest() {
+    void deleteMovieInfoTest() {
         reviewRepository.deleteById("abc").block();
 
         StepVerifier.create(reviewRepository.findAll())
@@ -71,7 +71,7 @@ public class ReviewRepositoryInt {
 
     @Test
     @DisplayName("find reviews by movieInfoId")
-    public void findByMovieInfoIdTest() {
+    void findByMovieInfoIdTest() {
         StepVerifier.create(reviewRepository.findByMovieInfoId(3L).log())
                 .assertNext(doc -> {
                     assertThat(doc.reviewId()).isEqualTo("abc");

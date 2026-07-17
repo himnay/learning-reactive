@@ -1,8 +1,8 @@
 package com.reactivespring.health;
 
 import com.reactivespring.repository.MovieInfoRepository;
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.ReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 

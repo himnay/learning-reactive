@@ -11,7 +11,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("expectNext() using flux stream")
-    public void fluxStreamEventTest() {
+    void fluxStreamEventTest() {
         var stringFlux = fluxFlow.fluxPublisher();
 
         StepVerifier.create(stringFlux)
@@ -21,7 +21,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("expectNextCount() using flux stream")
-    public void fluxStreamEventCountTest() {
+    void fluxStreamEventCountTest() {
         Flux<String> stringFlux = fluxFlow.fluxPublisher();
 
         StepVerifier.create(stringFlux)
@@ -30,7 +30,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("expectNext() and expectNextCount() using flux stream")
-    public void fluxStreamEventEventAndCountTest() {
+    void fluxStreamEventEventAndCountTest() {
         var stringFlux = fluxFlow.fluxPublisher();
 
         StepVerifier.create(stringFlux)
@@ -40,7 +40,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("transform() using flux stream")
-    public void fluxStreamEventTransformTest() {
+    void fluxStreamEventTransformTest() {
         var stringFlux = fluxFlow.fluxTransformPublisher();
 
         StepVerifier.create(stringFlux)
@@ -50,7 +50,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("filter() using flux stream")
-    public void fluxStreamEventFilterTest() {
+    void fluxStreamEventFilterTest() {
         var stringFlux = fluxFlow.fluxFilterPublisher("himansu");
 
         StepVerifier.create(stringFlux)
@@ -60,7 +60,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("flatMap() using flux stream")
-    public void fluxStreamEventFlatMapTest() {
+    void fluxStreamEventFlatMapTest() {
         var stringFlux = fluxFlow.fluxFlatMapPublisher();
 
         StepVerifier.create(stringFlux)
@@ -70,7 +70,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("flatMap() using flux stream")
-    public void fluxStreamEventFlatMapDelayTest() {
+    void fluxStreamEventFlatMapDelayTest() {
         var stringFlux = fluxFlow.fluxFlatMapPublisher();
 
         StepVerifier.create(stringFlux)
@@ -84,7 +84,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("transform() using flux stream")
-    public void monoEventAssertTest() {
+    void monoEventAssertTest() {
         Flux<String> stringMono = fluxFlow.fluxTransformPublisher();
 
         StepVerifier.create(stringMono)
@@ -94,7 +94,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("defaultIfEmpty() using flux stream")
-    public void fluxDefaultIfEmptyTest() {
+    void fluxDefaultIfEmptyTest() {
         Flux<String> stringMono = fluxFlow.fluxEmptyPublisher();
 
         StepVerifier.create(stringMono)
@@ -104,7 +104,7 @@ class FluxFlowTest {
 
     @Test
     @DisplayName("switchIfEmpty() using flux stream")
-    public void fluxSwitchIfEmptyTest() {
+    void fluxSwitchIfEmptyTest() {
         Flux<String> stringMono = fluxFlow.fluxSwitchIfEmptyPublisher();
 
         StepVerifier.create(stringMono)

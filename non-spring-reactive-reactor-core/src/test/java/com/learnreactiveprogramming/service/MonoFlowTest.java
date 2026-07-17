@@ -5,13 +5,13 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-public class MonoFlowTest {
+class MonoFlowTest {
 
     private MonoFlow monoFlow = new MonoFlow();
 
     @Test
     @DisplayName("expectNextCount() using mono stream")
-    public void monoEventTest() {
+    void monoEventTest() {
         Mono<String> stringMono = monoFlow.monoPublisher();
 
         StepVerifier.create(stringMono)
@@ -21,7 +21,7 @@ public class MonoFlowTest {
 
     @Test
     @DisplayName("expectNext() using mono stream")
-    public void monoEventAssertTest() {
+    void monoEventAssertTest() {
         Mono<String> stringMono = monoFlow.monoPublisher();
 
         StepVerifier.create(stringMono)

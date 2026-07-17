@@ -6,13 +6,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-public class CombineMonoFluxTest {
+class CombineMonoFluxTest {
 
     private CombineMonoFlux combineMonoFlux = new CombineMonoFlux();
 
     @Test
     @DisplayName("concat() two flux stream using static method")
-    public void concatFluxStreamTest() {
+    void concatFluxStreamTest() {
         Flux<String> concatFlux = combineMonoFlux.concatFluxStreamPublisher();
 
         StepVerifier.create(concatFlux)
@@ -22,7 +22,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("concatWith() two flux stream using instance method")
-    public void concatWihFluxStreamTest() {
+    void concatWihFluxStreamTest() {
         Flux<String> concatFlux = combineMonoFlux.concatWithFluxStreamPublisher();
 
         StepVerifier.create(concatFlux)
@@ -32,7 +32,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("concatWith() two mono stream")
-    public void concatMonoStreamTest() {
+    void concatMonoStreamTest() {
         Flux<String> concatFlux = combineMonoFlux.concatWithMonoStreamPublisher();
 
         StepVerifier.create(concatFlux)
@@ -42,7 +42,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("merge() two flux stream using static method")
-    public void mergeFluxStreamTest() {
+    void mergeFluxStreamTest() {
         Flux<String> concatFlux = combineMonoFlux.mergeFluxStreamPublisher();
 
         StepVerifier.create(concatFlux)
@@ -56,7 +56,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("mergeWith() two flux stream using instance method")
-    public void mergeWithFluxStreamTest() {
+    void mergeWithFluxStreamTest() {
         Flux<String> concatFlux = combineMonoFlux.mergeWithFluxStreamPublisher();
 
         StepVerifier.create(concatFlux)
@@ -70,7 +70,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("mergeWith() two mono stream")
-    public void mergeWithMonoStreamTest() {
+    void mergeWithMonoStreamTest() {
         Flux<String> concatFlux = combineMonoFlux.mergeWithMonoStreamPublisher();
 
         StepVerifier.create(concatFlux)
@@ -80,7 +80,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("mergeSequential() two flux stream using instance method")
-    public void mergeSequentialFluxStreamTest() {
+    void mergeSequentialFluxStreamTest() {
         Flux<String> mergeSequentialFlux = combineMonoFlux.mergeSequentialFluxStreamPublisher();
 
         StepVerifier.create(mergeSequentialFlux)
@@ -94,7 +94,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("zip() two flux stream using instance method")
-    public void zipFluxStreamTest() {
+    void zipFluxStreamTest() {
         Flux<String> zipFlux = combineMonoFlux.zipFluxStreamPublisher();
 
         StepVerifier.create(zipFlux)
@@ -104,7 +104,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("zip() two flux stream using instance method")
-    public void zipMultipleFluxStreamTest() {
+    void zipMultipleFluxStreamTest() {
         Flux<String> zipFlux = combineMonoFlux.zipMultipleFluxStreamPublisher();
 
         StepVerifier.create(zipFlux)
@@ -114,7 +114,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("zipWith() two flux stream using instance method")
-    public void zipWithFluxStreamTest() {
+    void zipWithFluxStreamTest() {
         Flux<String> zipWithFlux = combineMonoFlux.zipWithFluxStreamPublisher();
 
         StepVerifier.create(zipWithFlux)
@@ -124,7 +124,7 @@ public class CombineMonoFluxTest {
 
     @Test
     @DisplayName("zipWith() two mono stream")
-    public void zipWithMonoStreamTest() {
+    void zipWithMonoStreamTest() {
         Mono<String> zipWithMono = combineMonoFlux.zipWithMonoStreamPublisher();
 
         StepVerifier.create(zipWithMono)

@@ -5,11 +5,11 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
-public class ServerSentEventTest {
+class ServerSentEventTest {
 
     @Test
     @DisplayName("Test Server Sent Events using replay() Sink")
-    public void serverSentEventsUsingSink() {
+    void serverSentEventsUsingSink() {
         //given
         // create publisher sink
         Sinks.Many<Integer> replaySink = Sinks.many().replay().all();
@@ -33,7 +33,7 @@ public class ServerSentEventTest {
 
     @Test
     @DisplayName("Test Server Sent Events using multicast() Sink")
-    public void serverSentEventsUsingMultiCastSink() {
+    void serverSentEventsUsingMultiCastSink() {
         //given
         // create publisher
         Sinks.Many<Integer> multiCast = Sinks.many().multicast().onBackpressureBuffer();
@@ -60,7 +60,7 @@ public class ServerSentEventTest {
 
     @Test
     @DisplayName("Test Server Sent Events using unicast() Sink")
-    public void serverSentEventsUsingUniCastSink() {
+    void serverSentEventsUsingUniCastSink() {
         //given
         // create publisher
         Sinks.Many<Integer> multiCast = Sinks.many().unicast().onBackpressureBuffer();

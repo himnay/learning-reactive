@@ -4,7 +4,7 @@ import com.reactivespring.entity.ReviewDocument;
 import com.reactivespring.repository.ReviewRepository;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @AutoConfigureWebTestClient
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class ReviewInt {
+class ReviewInt {
 
     @Container
     @ServiceConnection
@@ -34,12 +34,12 @@ public class ReviewInt {
     private WebTestClient webTestClient;
 
     @BeforeAll
-    public void dbCleanup() {
+    void dbCleanup() {
         reviewRepository.deleteAll().block();
     }
 
     @BeforeEach
-    public void init() {
+    void init() {
         var reviewInfos = List.of(
                 new ReviewDocument(null, 1L, "awesome movie", 9.0),
                 new ReviewDocument(null, 2L, "awesome movie", 9.0),
@@ -49,13 +49,13 @@ public class ReviewInt {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         reviewRepository.deleteAll().block();
     }
 
     @Test
     @DisplayName("POST review")
-    public void createReviewsTest() {
+    void createReviewsTest() {
         var reviewInfo = new ReviewDocument(null, 1L, "awesome movie", 9.0);
 
         webTestClient.post()
@@ -73,7 +73,7 @@ public class ReviewInt {
 
     @Test
     @DisplayName("GET all reviews")
-    public void getAllReviewsTest() {
+    void getAllReviewsTest() {
         webTestClient.get()
                 .uri("/v1/reviews")
                 .exchange()
@@ -85,7 +85,7 @@ public class ReviewInt {
 
     @Test
     @DisplayName("GET review by id")
-    public void getReviewsByIDTest() {
+    void getReviewsByIDTest() {
         webTestClient.get()
                 .uri("/v1/reviews/{reviewId}", "abc")
                 .exchange()
@@ -100,7 +100,7 @@ public class ReviewInt {
 
     @Test
     @DisplayName("GET reviews by movieInfoId")
-    public void getAllReviewsByMovieInfoIDTest() {
+    void getAllReviewsByMovieInfoIDTest() {
         var uri = UriComponentsBuilder.fromUriString("/v1/reviews")
                 .queryParam("movieInfoId", 2L)
                 .buildAndExpand().toUri();
@@ -120,7 +120,7 @@ public class ReviewInt {
 
     @Test
     @DisplayName("PUT review - update existing")
-    public void upsertReviewTest() {
+    void upsertReviewTest() {
         var reviewInfo = new ReviewDocument(null, 1L, "awesome movie3", 9.0);
 
         webTestClient.put()
@@ -139,7 +139,7 @@ public class ReviewInt {
 
     @Test
     @DisplayName("PUT review - not found")
-    public void upsertReviewNotFoundTest() {
+    void upsertReviewNotFoundTest() {
         var reviewInfo = new ReviewDocument("", 1L, "awesome movie4", 9.0);
 
         webTestClient.put()
@@ -153,7 +153,7 @@ public class ReviewInt {
 
     @Test
     @DisplayName("DELETE review")
-    public void deleteReviewTest() {
+    void deleteReviewTest() {
         webTestClient.delete()
                 .uri("/v1/reviews/{reviewId}", "abc")
                 .exchange()

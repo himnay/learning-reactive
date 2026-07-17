@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-public class MoviesInfoServiceApplication {
+class MoviesInfoServiceApplication {
 
     private static final Logger log = LoggerFactory.getLogger(MoviesInfoServiceApplication.class);
 

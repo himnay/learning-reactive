@@ -7,9 +7,9 @@ import com.reactivespring.validator.ReviewValidator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
+import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -25,9 +25,9 @@ import static org.mockito.Mockito.when;
 @WebFluxTest
 @AutoConfigureWebTestClient
 @ContextConfiguration(classes = {ReviewRouter.class, ReviewHandler.class, ReviewValidator.class, GlobalExceptionHandler.class})
-public class ReviewTest {
+class ReviewTest {
 
-    @MockBean
+    @MockitoBean
     private ReviewRepository reviewRepository;
 
     @Autowired
@@ -35,7 +35,7 @@ public class ReviewTest {
 
     @Test
     @DisplayName("POST review")
-    public void createReviewsTest() {
+    void createReviewsTest() {
         var reviewId = UUID.randomUUID().toString();
         var reviewInfo = new ReviewDocument(reviewId, 1L, "awesome movie", 9.0);
 
@@ -56,7 +56,7 @@ public class ReviewTest {
 
     @Test
     @DisplayName("POST review with validation errors")
-    public void createReviewsWitWrongReviewDocumentTest() {
+    void createReviewsWitWrongReviewDocumentTest() {
         var reviewId = UUID.randomUUID().toString();
         var reviewInfo = new ReviewDocument(reviewId, null, "awesome movie", -9.0);
 
@@ -71,7 +71,7 @@ public class ReviewTest {
 
     @Test
     @DisplayName("GET all reviews")
-    public void getAllReviewsTest() {
+    void getAllReviewsTest() {
         var reviewInfos = List.of(
                 new ReviewDocument(null, 1L, "awesome movie", 9.0),
                 new ReviewDocument(null, 2L, "awesome movie", 9.0),
@@ -91,7 +91,7 @@ public class ReviewTest {
 
     @Test
     @DisplayName("GET review by id")
-    public void getReviewsByIDTest() {
+    void getReviewsByIDTest() {
         var review = new ReviewDocument("abc", 3L, "awesome movie", 8.0);
 
         when(reviewRepository.findById("abc")).thenReturn(Mono.just(review));
@@ -110,7 +110,7 @@ public class ReviewTest {
 
     @Test
     @DisplayName("GET reviews by movieInfoId")
-    public void getAllReviewsByMovieInfoIDTest() {
+    void getAllReviewsByMovieInfoIDTest() {
         var review = new ReviewDocument("abc", 3L, "awesome movie", 8.0);
 
         var uri = UriComponentsBuilder.fromUriString("/v1/reviews")
@@ -134,7 +134,7 @@ public class ReviewTest {
 
     @Test
     @DisplayName("PUT review - update existing")
-    public void upsertReviewTest() {
+    void upsertReviewTest() {
         var reviewId = UUID.randomUUID().toString();
         var reviewInfo = new ReviewDocument(reviewId, 1L, "awesome movie", 9.0);
 
@@ -157,7 +157,7 @@ public class ReviewTest {
 
     @Test
     @DisplayName("PUT review - not found")
-    public void upsertReviewNotFoundTest() {
+    void upsertReviewNotFoundTest() {
         var reviewId = UUID.randomUUID().toString();
         var reviewInfo = new ReviewDocument(reviewId, 1L, "awesome movie", 9.0);
 
@@ -172,7 +172,7 @@ public class ReviewTest {
 
     @Test
     @DisplayName("DELETE review")
-    public void deleteReviewTest() {
+    void deleteReviewTest() {
         var reviewId = UUID.randomUUID().toString();
 
         when(reviewRepository.deleteById(reviewId)).thenReturn(Mono.empty());
