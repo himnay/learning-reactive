@@ -49,14 +49,14 @@ flowchart LR
 
 **Code organization:**
 
-| Piece | Class | Responsibility |
-|---|---|---|
-| HTTP contract | `api/MoviesApi` | `@RequestMapping`-annotated interface — the only place HTTP annotations live |
-| Controller | `controller/MoviesController` | Implements `MoviesApi`, holds zero annotations of its own, orchestrates the two clients |
-| Outbound clients | `client/MovieInfoRestClient`, `client/ReviewRestClient` | One `WebClient`-based class per downstream dependency, each owning its own error mapping and retry policy |
-| Domain records | `entity/MovieInfo`, `entity/Review`, `entity/Movie` | Immutable Java records — `Movie` is the composed response, `MovieInfo`/`Review` mirror the upstream services' shapes |
-| Error mapping | `exception/*`, `handler/GlobalExceptionHandler` | Typed exceptions per failure mode, mapped to HTTP statuses by a `@RestControllerAdvice` |
-| WebClient bean | `config/WebClientConfig` | A single unconfigured `WebClient.builder().build()` shared by both clients |
+| Piece            | Class                                                   | Responsibility                                                                                                       |
+|------------------|---------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| HTTP contract    | `api/MoviesApi`                                         | `@RequestMapping`-annotated interface — the only place HTTP annotations live                                         |
+| Controller       | `controller/MoviesController`                           | Implements `MoviesApi`, holds zero annotations of its own, orchestrates the two clients                              |
+| Outbound clients | `client/MovieInfoRestClient`, `client/ReviewRestClient` | One `WebClient`-based class per downstream dependency, each owning its own error mapping and retry policy            |
+| Domain records   | `entity/MovieInfo`, `entity/Review`, `entity/Movie`     | Immutable Java records — `Movie` is the composed response, `MovieInfo`/`Review` mirror the upstream services' shapes |
+| Error mapping    | `exception/*`, `handler/GlobalExceptionHandler`         | Typed exceptions per failure mode, mapped to HTTP statuses by a `@RestControllerAdvice`                              |
+| WebClient bean   | `config/WebClientConfig`                                | A single unconfigured `WebClient.builder().build()` shared by both clients                                           |
 
 This mirrors the **interface-first API** pattern used by the info service ([root README §6, Module 2](../README.md#module-2-spring-reactive-service-info)): `MoviesApi` owns the `@RequestMapping`/`@GetMapping` annotations and return types (`Mono<ResponseEntity<Movie>>`, `Flux<MovieInfo>`), and `MoviesController` is a plain implementation class. This keeps the controller trivially unit-testable — you can construct it with mock clients and call its methods directly with no web context needed.
 
@@ -156,12 +156,12 @@ webClient.get()
 
 Four exception types, one per client × failure class:
 
-| Exception | Thrown when | Retried? | Mapped HTTP status (`GlobalExceptionHandler`) |
-|---|---|---|---|
-| `MoviesInfoClientException` | Info service returns 4xx | No | The upstream's own status code (carried on the exception) |
-| `MoviesInfoServerException` | Info service returns 5xx | Yes | `500 Internal Server Error` |
-| `ReviewsClientException` | Review service returns 4xx (except 404, see below) | No | `400 Bad Request` |
-| `ReviewsServerException` | Review service returns 5xx | No (no retry configured on this client) | `500 Internal Server Error` |
+| Exception                   | Thrown when                                        | Retried?                                | Mapped HTTP status (`GlobalExceptionHandler`)             |
+|-----------------------------|----------------------------------------------------|-----------------------------------------|-----------------------------------------------------------|
+| `MoviesInfoClientException` | Info service returns 4xx                           | No                                      | The upstream's own status code (carried on the exception) |
+| `MoviesInfoServerException` | Info service returns 5xx                           | Yes                                     | `500 Internal Server Error`                               |
+| `ReviewsClientException`    | Review service returns 4xx (except 404, see below) | No                                      | `400 Bad Request`                                         |
+| `ReviewsServerException`    | Review service returns 5xx                         | No (no retry configured on this client) | `500 Internal Server Error`                               |
 
 **Asymmetry worth noting:** `ReviewRestClient` treats a `404` from the review service as `Mono.empty()` rather than an error —
 
@@ -240,12 +240,12 @@ This is a genuine inconsistency between how the two services model the same fiel
 
 ## 9. Endpoints
 
-| Method | Path | Description | Response |
-|---|---|---|---|
-| `GET` | `/v1/movies/{id}` | Aggregate movie info + reviews for one movie | `200 OK` `Movie` JSON, or `404` with `X-Reason` header |
-| `GET` | `/v1/movies/stream` | NDJSON proxy of the info service's live movie-info stream | `application/x-ndjson` |
-| `GET` | `/actuator/health` | Health check | `200 OK` |
-| `GET` | `/actuator/prometheus` | Prometheus scrape endpoint | `text/plain` |
+| Method | Path                   | Description                                               | Response                                               |
+|--------|------------------------|-----------------------------------------------------------|--------------------------------------------------------|
+| `GET`  | `/v1/movies/{id}`      | Aggregate movie info + reviews for one movie              | `200 OK` `Movie` JSON, or `404` with `X-Reason` header |
+| `GET`  | `/v1/movies/stream`    | NDJSON proxy of the info service's live movie-info stream | `application/x-ndjson`                                 |
+| `GET`  | `/actuator/health`     | Health check                                              | `200 OK`                                               |
+| `GET`  | `/actuator/prometheus` | Prometheus scrape endpoint                                | `text/plain`                                           |
 
 `Movie` schema:
 ```json

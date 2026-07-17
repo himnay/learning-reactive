@@ -550,14 +550,14 @@ All client applications should target `http://localhost:8765` instead of individ
 
 **Filter chain (in execution order):**
 
-| Order | Filter | Responsibility |
-|---|---|---|
-| `HIGHEST_PRECEDENCE − 1` | `RequestIdWebFilter` | Honours an inbound `X-Request-Id` or mints a UUID; writes it into Reactor `Context` for downstream operators, not just the header |
-| `HIGHEST_PRECEDENCE` | `GlobalLoggingFilter` | Generates/propagates `X-Correlation-Id`; logs `→`/`←` request and response lines with timing |
-| `HIGHEST_PRECEDENCE + 10` | `JwtAuthenticationWebFilter` | Validates the `Bearer` JWT (via `jjwt`) on every path except `/actuator/**`, `/fallback/**`, `/v1/public/**`; injects `X-User-Id` from the token's subject claim so downstream services trust the caller identity without re-validating the token themselves |
-| route-level | `RequestRateLimiter` (default-filter, all routes) | Redis-backed token bucket (`replenishRate: 10`, `burstCapacity: 20`) keyed by `userKeyResolver` — prefers `X-User-Id` (set by the JWT filter) and falls back to the caller's remote IP for public/unauthenticated routes |
-| route-level | `PreFilter` / `PostFilter` (named `GatewayFilterFactory`) | Stamp `X-Gateway-Version` and compute `X-Response-Time-Ms` on selected YAML routes |
-| route-level | `circuitBreaker` (Resilience4j) | Per-route circuit breaking with a `forward:/fallback/{service}` fallback URI |
+| Order                     | Filter                                                    | Responsibility                                                                                                                                                                                                                                               |
+|---------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `HIGHEST_PRECEDENCE − 1`  | `RequestIdWebFilter`                                      | Honours an inbound `X-Request-Id` or mints a UUID; writes it into Reactor `Context` for downstream operators, not just the header                                                                                                                            |
+| `HIGHEST_PRECEDENCE`      | `GlobalLoggingFilter`                                     | Generates/propagates `X-Correlation-Id`; logs `→`/`←` request and response lines with timing                                                                                                                                                                 |
+| `HIGHEST_PRECEDENCE + 10` | `JwtAuthenticationWebFilter`                              | Validates the `Bearer` JWT (via `jjwt`) on every path except `/actuator/**`, `/fallback/**`, `/v1/public/**`; injects `X-User-Id` from the token's subject claim so downstream services trust the caller identity without re-validating the token themselves |
+| route-level               | `RequestRateLimiter` (default-filter, all routes)         | Redis-backed token bucket (`replenishRate: 10`, `burstCapacity: 20`) keyed by `userKeyResolver` — prefers `X-User-Id` (set by the JWT filter) and falls back to the caller's remote IP for public/unauthenticated routes                                     |
+| route-level               | `PreFilter` / `PostFilter` (named `GatewayFilterFactory`) | Stamp `X-Gateway-Version` and compute `X-Response-Time-Ms` on selected YAML routes                                                                                                                                                                           |
+| route-level               | `circuitBreaker` (Resilience4j)                           | Per-route circuit breaking with a `forward:/fallback/{service}` fallback URI                                                                                                                                                                                 |
 
 **JWT validation (`JwtAuthenticationWebFilter` + `TokenUtil`):** rejects requests with a missing/malformed `Authorization` header or an invalid/expired token with `401 Unauthorized` *before* the request reaches route matching — auth failures never count against a circuit breaker or reach a backend service.
 
@@ -580,27 +580,27 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 <a id="7-technology-stack"></a>
 ## 7. 🧰 Technology Stack
 
-| Technology | Version | Role |
-|---|---|---|
-| Java | 25 | Runtime — records, sealed types, pattern matching |
-| Spring Boot | 4.1.0 | Auto-configuration, embedded Netty, Actuator (pinned in root `pom.xml`, overriding the corporate `super-pom` parent) |
-| Spring Framework / WebFlux | 7.0.8 (via Boot 4.1.0) | Reactive web framework on Project Reactor |
-| Project Reactor | 3.8.6 (via Boot) | Mono, Flux, Sinks, Schedulers |
-| Spring Cloud | 2025.1.2 | BOM for `spring-cloud-starter-gateway-server-webflux` and `spring-cloud-starter-circuitbreaker-reactor-resilience4j` |
-| Spring Data Reactive MongoDB | via Boot | Non-blocking MongoDB driver (info + review services) |
-| Spring Data R2DBC | via Boot | Non-blocking relational driver (r2dbc service) |
-| `r2dbc-postgresql` | 1.0.7.RELEASE | Reactive PostgreSQL wire-protocol driver |
-| MongoDB | 7 (Docker / Testcontainers) | Document database for info and review services |
-| PostgreSQL | 16 (Docker / Testcontainers) | Relational database for the r2dbc service |
-| Redis | 7 (Docker) | Reactive cache-aside store (info service) + Gateway `RequestRateLimiter` token bucket |
-| `jjwt` (api/impl/jackson) | 0.12.6 | JWT issuing/validation for the gateway's `JwtAuthenticationWebFilter` |
-| Resilience4j | via Boot | Circuit breaker, time limiter, bulkhead (gateway) |
-| Micrometer + Prometheus | via Boot | Metrics collection and scraping |
-| WireMock | via spring-cloud-contract | HTTP stub server for movies service integration tests |
-| Testcontainers | 1.20.4 | Real MongoDB / PostgreSQL in integration tests via Docker |
-| AssertJ | via Boot | Fluent assertions in tests |
-| StepVerifier | via reactor-test | Reactive stream assertion DSL |
-| Maven | 3.9.x | Multi-module build |
+| Technology                   | Version                      | Role                                                                                                                 |
+|------------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| Java                         | 25                           | Runtime — records, sealed types, pattern matching                                                                    |
+| Spring Boot                  | 4.1.0                        | Auto-configuration, embedded Netty, Actuator (pinned in root `pom.xml`, overriding the corporate `super-pom` parent) |
+| Spring Framework / WebFlux   | 7.0.8 (via Boot 4.1.0)       | Reactive web framework on Project Reactor                                                                            |
+| Project Reactor              | 3.8.6 (via Boot)             | Mono, Flux, Sinks, Schedulers                                                                                        |
+| Spring Cloud                 | 2025.1.2                     | BOM for `spring-cloud-starter-gateway-server-webflux` and `spring-cloud-starter-circuitbreaker-reactor-resilience4j` |
+| Spring Data Reactive MongoDB | via Boot                     | Non-blocking MongoDB driver (info + review services)                                                                 |
+| Spring Data R2DBC            | via Boot                     | Non-blocking relational driver (r2dbc service)                                                                       |
+| `r2dbc-postgresql`           | 1.0.7.RELEASE                | Reactive PostgreSQL wire-protocol driver                                                                             |
+| MongoDB                      | 7 (Docker / Testcontainers)  | Document database for info and review services                                                                       |
+| PostgreSQL                   | 16 (Docker / Testcontainers) | Relational database for the r2dbc service                                                                            |
+| Redis                        | 7 (Docker)                   | Reactive cache-aside store (info service) + Gateway `RequestRateLimiter` token bucket                                |
+| `jjwt` (api/impl/jackson)    | 0.12.6                       | JWT issuing/validation for the gateway's `JwtAuthenticationWebFilter`                                                |
+| Resilience4j                 | via Boot                     | Circuit breaker, time limiter, bulkhead (gateway)                                                                    |
+| Micrometer + Prometheus      | via Boot                     | Metrics collection and scraping                                                                                      |
+| WireMock                     | via spring-cloud-contract    | HTTP stub server for movies service integration tests                                                                |
+| Testcontainers               | 1.20.4                       | Real MongoDB / PostgreSQL in integration tests via Docker                                                            |
+| AssertJ                      | via Boot                     | Fluent assertions in tests                                                                                           |
+| StepVerifier                 | via reactor-test             | Reactive stream assertion DSL                                                                                        |
+| Maven                        | 3.9.x                        | Multi-module build                                                                                                   |
 
 ---
 
@@ -809,13 +809,13 @@ public Mono<ServerResponse> getReviewsStream(ServerRequest request) {
 
 ### Sink Strategies Compared
 
-| Strategy | New subscriber receives | Use case |
-|---|---|---|
-| `replay().all()` | All past events + live | Audit log, event sourcing, full history needed |
-| `replay().latest()` | Most recent event + live | Live dashboard, current state |
-| `replay().limit(n)` | Last N events + live | Sliding window display |
-| `multicast().onBackpressureBuffer()` | Only live events | Real-time notifications |
-| `unicast()` | Only live, single subscriber | Internal pipeline handoff |
+| Strategy                             | New subscriber receives      | Use case                                       |
+|--------------------------------------|------------------------------|------------------------------------------------|
+| `replay().all()`                     | All past events + live       | Audit log, event sourcing, full history needed |
+| `replay().latest()`                  | Most recent event + live     | Live dashboard, current state                  |
+| `replay().limit(n)`                  | Last N events + live         | Sliding window display                         |
+| `multicast().onBackpressureBuffer()` | Only live events             | Real-time notifications                        |
+| `unicast()`                          | Only live, single subscriber | Internal pipeline handoff                      |
 
 ### Why SSE Routes Have No Circuit Breaker
 
@@ -1015,13 +1015,13 @@ PostFilterGatewayFilterFactory →  name: PostFilter in YAML
 
 #### Built-in Shortcut Filters
 
-| Shortcut syntax | What it does |
-|---|---|
-| `AddRequestHeader=Name, Value` | Adds a header to the forwarded request |
-| `AddResponseHeader=Name, Value` | Adds a header to the client response |
-| `SecureHeaders` | Adds standard security headers (X-Frame-Options, HSTS, etc.) |
-| `StripPrefix=1` | Removes the first path segment before forwarding |
-| `RewritePath=/old/(?<seg>.*), /$\{seg}` | Regex path rewrite |
+| Shortcut syntax                         | What it does                                                 |
+|-----------------------------------------|--------------------------------------------------------------|
+| `AddRequestHeader=Name, Value`          | Adds a header to the forwarded request                       |
+| `AddResponseHeader=Name, Value`         | Adds a header to the client response                         |
+| `SecureHeaders`                         | Adds standard security headers (X-Frame-Options, HSTS, etc.) |
+| `StripPrefix=1`                         | Removes the first path segment before forwarding             |
+| `RewritePath=/old/(?<seg>.*), /$\{seg}` | Regex path rewrite                                           |
 
 #### `WebFilter` — `RequestIdWebFilter` and `JwtAuthenticationWebFilter`
 
@@ -1577,20 +1577,20 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### Movie Info Service (via Gateway)
 
-| Method | Path | Description | Body | Response |
-|---|---|---|---|---|
-| POST | `/v1/movieInfo` | Create a movie info record | `MovieInfoDocument` JSON | `201 Created` |
-| GET | `/v1/movieInfos` | List all movies | — | `200 OK` array |
-| GET | `/v1/movieInfos?year=2023` | Filter by release year | — | `200 OK` filtered |
-| GET | `/v1/movieInfos?name=Batman` | Filter by name | — | `200 OK` filtered |
-| GET | `/v1/movieInfo/{id}` | Get one movie by ID | — | `200 OK` or `404` |
-| PUT | `/v1/movieInfo/{id}` | Upsert movie by ID | `MovieInfoDocument` JSON | `200 OK` |
-| DELETE | `/v1/movieInfo/{id}` | Delete movie by ID | — | `204 No Content` |
-| GET | `/v1/movieInfo/stream` | SSE — all movie info events, replayed from the start | — | `text/event-stream` (`ServerSentEvent<MovieInfoDocument>`) |
-| GET | `/v1/movieInfo/tailable` | Real-time stream of new inserts via MongoDB tailable cursor (capped collection) | — | `text/event-stream` |
-| POST | `/v1/movieInfo/batch` | Streaming bulk insert — request body is consumed as a `Flux` | `MovieInfoDocument[]` JSON | `201 Created` array |
-| GET | `/v1/movieInfo/summary` | List — `MovieSummary` projection (id/name/year only) | — | `200 OK` array |
-| GET | `/v1/movieInfo/{id}/summary` | Single — `MovieSummary` projection | — | `200 OK` or empty |
+| Method | Path                         | Description                                                                     | Body                       | Response                                                   |
+|--------|------------------------------|---------------------------------------------------------------------------------|----------------------------|------------------------------------------------------------|
+| POST   | `/v1/movieInfo`              | Create a movie info record                                                      | `MovieInfoDocument` JSON   | `201 Created`                                              |
+| GET    | `/v1/movieInfos`             | List all movies                                                                 | —                          | `200 OK` array                                             |
+| GET    | `/v1/movieInfos?year=2023`   | Filter by release year                                                          | —                          | `200 OK` filtered                                          |
+| GET    | `/v1/movieInfos?name=Batman` | Filter by name                                                                  | —                          | `200 OK` filtered                                          |
+| GET    | `/v1/movieInfo/{id}`         | Get one movie by ID                                                             | —                          | `200 OK` or `404`                                          |
+| PUT    | `/v1/movieInfo/{id}`         | Upsert movie by ID                                                              | `MovieInfoDocument` JSON   | `200 OK`                                                   |
+| DELETE | `/v1/movieInfo/{id}`         | Delete movie by ID                                                              | —                          | `204 No Content`                                           |
+| GET    | `/v1/movieInfo/stream`       | SSE — all movie info events, replayed from the start                            | —                          | `text/event-stream` (`ServerSentEvent<MovieInfoDocument>`) |
+| GET    | `/v1/movieInfo/tailable`     | Real-time stream of new inserts via MongoDB tailable cursor (capped collection) | —                          | `text/event-stream`                                        |
+| POST   | `/v1/movieInfo/batch`        | Streaming bulk insert — request body is consumed as a `Flux`                    | `MovieInfoDocument[]` JSON | `201 Created` array                                        |
+| GET    | `/v1/movieInfo/summary`      | List — `MovieSummary` projection (id/name/year only)                            | —                          | `200 OK` array                                             |
+| GET    | `/v1/movieInfo/{id}/summary` | Single — `MovieSummary` projection                                              | —                          | `200 OK` or empty                                          |
 
 **Gateway routing note:** the gateway's dedicated YAML SSE route predicate is `Path=/v1/movieInfoStream` (no slash before "stream"), which does not actually match the real endpoint path `/v1/movieInfo/stream`. In practice, requests to `/v1/movieInfo/stream` are instead matched by the broader programmatic route (`/v1/movieInfo/**`) from `GatewayRoutesConfig`, which *does* attach a circuit breaker and retry filter — worth knowing if the "[§10](#10-server-sent-events-and-sinks) SSE has no circuit breaker" reasoning is being relied upon for this specific path. The same slash mismatch exists for the review service's `/v1/reviewsStream` YAML predicate vs. the real `/v1/reviews/stream` path.
 
@@ -1609,15 +1609,15 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### Review Service (via Gateway)
 
-| Method | Path | Description | Body | Response |
-|---|---|---|---|---|
-| POST | `/v1/reviews` | Create a review | `ReviewDocument` JSON | `201 Created` |
-| GET | `/v1/reviews` | List all reviews | — | `200 OK` array |
-| GET | `/v1/reviews?movieInfoId=123` | Reviews for a movie | — | `200 OK` filtered |
-| GET | `/v1/reviews/{id}` | Get review by ID | — | `200 OK` or `404` |
-| PUT | `/v1/reviews/{id}` | Update comment and rating | `ReviewDocument` JSON | `200 OK` |
-| DELETE | `/v1/reviews/{id}` | Delete review | — | `204 No Content` |
-| GET | `/v1/reviews/stream` | SSE — latest review | — | `application/x-ndjson` |
+| Method | Path                          | Description               | Body                  | Response               |
+|--------|-------------------------------|---------------------------|-----------------------|------------------------|
+| POST   | `/v1/reviews`                 | Create a review           | `ReviewDocument` JSON | `201 Created`          |
+| GET    | `/v1/reviews`                 | List all reviews          | —                     | `200 OK` array         |
+| GET    | `/v1/reviews?movieInfoId=123` | Reviews for a movie       | —                     | `200 OK` filtered      |
+| GET    | `/v1/reviews/{id}`            | Get review by ID          | —                     | `200 OK` or `404`      |
+| PUT    | `/v1/reviews/{id}`            | Update comment and rating | `ReviewDocument` JSON | `200 OK`               |
+| DELETE | `/v1/reviews/{id}`            | Delete review             | —                     | `204 No Content`       |
+| GET    | `/v1/reviews/stream`          | SSE — latest review       | —                     | `application/x-ndjson` |
 
 `ReviewDocument` schema:
 ```json
@@ -1633,10 +1633,10 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### Movies Aggregation Service (via Gateway)
 
-| Method | Path | Description | Response |
-|---|---|---|---|
-| GET | `/v1/movies/{movieId}` | Movie with reviews | `200 OK` `Movie` or `404` |
-| GET | `/v1/movies/stream` | SSE proxy of movie info stream | `application/x-ndjson` |
+| Method | Path                   | Description                    | Response                  |
+|--------|------------------------|--------------------------------|---------------------------|
+| GET    | `/v1/movies/{movieId}` | Movie with reviews             | `200 OK` `Movie` or `404` |
+| GET    | `/v1/movies/stream`    | SSE proxy of movie info stream | `application/x-ndjson`    |
 
 `Movie` schema:
 ```json
@@ -1652,15 +1652,15 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 `GatewayRoutesConfig` does not currently define a route for the r2dbc service, so it is called directly rather than through the gateway at `http://localhost:8765`:
 
-| Method | Path | Description | Body | Response |
-|---|---|---|---|---|
-| GET | `/v1/genres` | List all genres | — | `200 OK` array |
-| GET | `/v1/genres/{id}` | Get genre by ID | — | `200 OK` or `404` |
-| GET | `/v1/genres/search?name=Sci` | Case-insensitive substring search | — | `200 OK` filtered |
-| POST | `/v1/genres` | Create a genre | `Genre` JSON | `201 Created` |
-| POST | `/v1/genres/batch` | Bulk-insert genres in one transaction | `Genre[]` JSON | `201 Created` array |
-| PUT | `/v1/genres/{id}` | Update a genre | `Genre` JSON | `200 OK` or `404` |
-| DELETE | `/v1/genres/{id}` | Delete a genre | — | `204 No Content` or `404` |
+| Method | Path                         | Description                           | Body           | Response                  |
+|--------|------------------------------|---------------------------------------|----------------|---------------------------|
+| GET    | `/v1/genres`                 | List all genres                       | —              | `200 OK` array            |
+| GET    | `/v1/genres/{id}`            | Get genre by ID                       | —              | `200 OK` or `404`         |
+| GET    | `/v1/genres/search?name=Sci` | Case-insensitive substring search     | —              | `200 OK` filtered         |
+| POST   | `/v1/genres`                 | Create a genre                        | `Genre` JSON   | `201 Created`             |
+| POST   | `/v1/genres/batch`           | Bulk-insert genres in one transaction | `Genre[]` JSON | `201 Created` array       |
+| PUT    | `/v1/genres/{id}`            | Update a genre                        | `Genre` JSON   | `200 OK` or `404`         |
+| DELETE | `/v1/genres/{id}`            | Delete a genre                        | —              | `204 No Content` or `404` |
 
 `Genre` schema:
 ```json
@@ -1677,12 +1677,12 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### Gateway Actuator Endpoints
 
-| Path | Description |
-|---|---|
-| `GET /actuator/health` | Health of gateway and downstream services |
+| Path                           | Description                                        |
+|--------------------------------|----------------------------------------------------|
+| `GET /actuator/health`         | Health of gateway and downstream services          |
 | `GET /actuator/gateway/routes` | All registered routes (YAML + programmatic merged) |
-| `GET /actuator/metrics` | Micrometer metrics |
-| `GET /actuator/prometheus` | Prometheus scrape endpoint |
+| `GET /actuator/metrics`        | Micrometer metrics                                 |
+| `GET /actuator/prometheus`     | Prometheus scrape endpoint                         |
 
 ---
 
@@ -1887,11 +1887,11 @@ Thread-local values (MDC logging context, Spring Security `SecurityContextHolder
 
 ### Summary Verdict
 
-| Use reactive? | Scenario |
-|---|---|
-| YES | API gateway, high-traffic REST APIs, SSE/WebSocket streaming, microservice fan-out, event-driven pipelines, I/O-bound workloads with high concurrency |
-| MAYBE | Moderate-traffic CRUD services with MongoDB or Cassandra (both have reactive drivers); teams willing to invest in the learning curve |
-| NO | CPU-bound batch processing, simple internal admin tools, legacy codebases with blocking dependencies, teams with no reactive experience and a tight deadline |
+| Use reactive? | Scenario                                                                                                                                                     |
+|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| YES           | API gateway, high-traffic REST APIs, SSE/WebSocket streaming, microservice fan-out, event-driven pipelines, I/O-bound workloads with high concurrency        |
+| MAYBE         | Moderate-traffic CRUD services with MongoDB or Cassandra (both have reactive drivers); teams willing to invest in the learning curve                         |
+| NO            | CPU-bound batch processing, simple internal admin tools, legacy codebases with blocking dependencies, teams with no reactive experience and a tight deadline |
 
 ---
 
@@ -1900,49 +1900,49 @@ Thread-local values (MDC logging context, Spring Security `SecurityContextHolder
 
 This project was built to cement specific reactive concepts through working code. The table below maps each concept to exactly where it lives in the codebase:
 
-| Concept | File / Location |
-|---|---|
-| Raw Reactor operators (map, flatMap, concatMap, zip, merge) | `non-spring-reactive-reactor-core/src/main/java/` |
-| `flatMap` vs `concatMap` ordering difference | `FluxFlow.fluxFlatMapDelayPublisher()` vs `fluxConcatMapDelayPublisher()` |
-| Stream combination patterns | `CombineMonoFlux.*` — all 10 operators |
-| Annotation-based WebFlux (`@RestController`) | `spring-reactive-service-info/router/MovieInfoController.java` |
-| Interface-based HTTP contract | `spring-reactive-service-info/api/MovieInfoApi.java` |
-| Functional router/handler WebFlux | `spring-reactive-service-review/router/ReviewRouter.java` + `handler/ReviewHandler.java` |
-| Hot publisher — `Sinks.replay().all()` | `MovieInfoController.movieInfoSinks` |
-| Hot publisher — `Sinks.replay().latest()` | `ReviewHandler.reviewInfoSinks` |
-| SSE streaming endpoint | `MovieInfoApi.getMovieInfoStream()`, `ReviewHandler.getReviewsStream()` |
-| Non-blocking WebClient with typed error handling | `MovieInfoRestClient.java`, `ReviewRestClient.java` |
-| Reactive fan-out aggregation (`flatMap` chain) | `MoviesController.retrieveMovieById()` |
-| Retry with exponential backoff | `MovieInfoRestClient.retrieveMovieInfo()` `.retryWhen(...)` |
-| Reactive MongoDB with Java records | `MovieInfoDocument.java`, `MovieInfoRepository.java` |
-| `@RequestParam Map<String, String>` (not enum key) | `MovieInfoApi.getAllMovieInfos()` |
-| Global exception handling | `GlobalExceptionHandler.java` in each service |
-| Bean Validation in WebFlux | `MovieInfoApi.createMovieInfo(@Valid ...)` |
-| Manual validation in functional router | `ReviewValidator.java`, `ReviewHandler.addReview()` |
-| API Gateway programmatic routes + circuit breaker | `spring-reactive-gateway/config/GatewayRoutesConfig.java` |
-| API Gateway YAML routes + named filters | `spring-reactive-gateway/src/main/resources/application.yml` |
-| GlobalFilter with correlation ID | `spring-reactive-gateway/filter/GlobalLoggingFilter.java` |
-| Named `GatewayFilterFactory` (pre-request enrichment) | `spring-reactive-gateway/filter/PreFilterGatewayFilterFactory.java` |
-| Named `GatewayFilterFactory` (post-response timing) | `spring-reactive-gateway/filter/PostFilterGatewayFilterFactory.java` |
-| Circuit breaker fallback controller | `spring-reactive-gateway/controller/FallbackController.java` |
-| Resilience4j CB + time limiter configuration | `spring-reactive-gateway/src/main/resources/application.yml` |
-| `httpclient` wiretap + connect/response timeout | `spring-reactive-gateway/src/main/resources/application.yml` |
-| `StepVerifier` unit tests | `FluxFlowTest.java`, `MonoFlowTest.java`, `CombineMonoFluxTest.java` |
-| `@WebFluxTest` controller slice tests | `MovieInfoControllerTest.java`, `ServerSentEventTest.java` |
-| `@SpringBootTest` + Testcontainers | `MovieInfoControllerInt.java`, `ReviewInt.java`, `ReviewRepositoryInt.java` |
-| WireMock contract test | `MoviesControllerWireMockInt.java` |
-| Actuator + Prometheus metrics | `application.yml` in each service + root `pom.xml` |
-| Testcontainers macOS Docker Desktop fix | Root `pom.xml` Surefire `<argLine>` and `<environmentVariables>` |
-| R2DBC reactive relational access | `spring-reactive-service-r2dbc/repository/GenreRepository.java` |
-| Reactive transactions (`TransactionalOperator`) | `spring-reactive-service-r2dbc/service/GenreService.java` |
-| Reactive bulk insert (`saveAll(Flux<T>)`) | `GenreService.createBatch()` |
-| MongoDB field projection (CQRS-lite read model) | `spring-reactive-service-info/projection/MovieInfoProjectionRepository.java` |
-| Reactive cache-aside with Redis | `spring-reactive-service-info/cache/MovieInfoCacheService.java` |
-| Transactional outbox pattern | `spring-reactive-service-info/outbox/OutboxService.java`, `OutboxEvent.java` |
-| Reactive WebSocket (bidirectional, shared sink) | `spring-reactive-service-info/websocket/MovieInfoWebSocketHandler.java` |
-| Reactor `Context` → SLF4J `MDC` bridging | `spring-reactive-service-info/util/ReactiveLogger.java` |
-| `WebFilter` request-id propagation via Reactor `Context` | `spring-reactive-gateway/filter/RequestIdWebFilter.java` |
-| JWT authentication at the gateway edge | `spring-reactive-gateway/filter/JwtAuthenticationWebFilter.java`, `TokenUtil.java` |
-| Redis-backed distributed rate limiting | `spring-reactive-gateway/config/RateLimiterConfig.java` + `application.yml` `RequestRateLimiter` |
-| Canary / weighted routing | `spring-reactive-gateway/src/main/resources/application.yml` — `Weight=movie-info-group` routes |
-| Resilience4j bulkhead (semaphore + thread-pool) | `spring-reactive-gateway/src/main/resources/application.yml` |
+| Concept                                                     | File / Location                                                                                  |
+|-------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| Raw Reactor operators (map, flatMap, concatMap, zip, merge) | `non-spring-reactive-reactor-core/src/main/java/`                                                |
+| `flatMap` vs `concatMap` ordering difference                | `FluxFlow.fluxFlatMapDelayPublisher()` vs `fluxConcatMapDelayPublisher()`                        |
+| Stream combination patterns                                 | `CombineMonoFlux.*` — all 10 operators                                                           |
+| Annotation-based WebFlux (`@RestController`)                | `spring-reactive-service-info/router/MovieInfoController.java`                                   |
+| Interface-based HTTP contract                               | `spring-reactive-service-info/api/MovieInfoApi.java`                                             |
+| Functional router/handler WebFlux                           | `spring-reactive-service-review/router/ReviewRouter.java` + `handler/ReviewHandler.java`         |
+| Hot publisher — `Sinks.replay().all()`                      | `MovieInfoController.movieInfoSinks`                                                             |
+| Hot publisher — `Sinks.replay().latest()`                   | `ReviewHandler.reviewInfoSinks`                                                                  |
+| SSE streaming endpoint                                      | `MovieInfoApi.getMovieInfoStream()`, `ReviewHandler.getReviewsStream()`                          |
+| Non-blocking WebClient with typed error handling            | `MovieInfoRestClient.java`, `ReviewRestClient.java`                                              |
+| Reactive fan-out aggregation (`flatMap` chain)              | `MoviesController.retrieveMovieById()`                                                           |
+| Retry with exponential backoff                              | `MovieInfoRestClient.retrieveMovieInfo()` `.retryWhen(...)`                                      |
+| Reactive MongoDB with Java records                          | `MovieInfoDocument.java`, `MovieInfoRepository.java`                                             |
+| `@RequestParam Map<String, String>` (not enum key)          | `MovieInfoApi.getAllMovieInfos()`                                                                |
+| Global exception handling                                   | `GlobalExceptionHandler.java` in each service                                                    |
+| Bean Validation in WebFlux                                  | `MovieInfoApi.createMovieInfo(@Valid ...)`                                                       |
+| Manual validation in functional router                      | `ReviewValidator.java`, `ReviewHandler.addReview()`                                              |
+| API Gateway programmatic routes + circuit breaker           | `spring-reactive-gateway/config/GatewayRoutesConfig.java`                                        |
+| API Gateway YAML routes + named filters                     | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
+| GlobalFilter with correlation ID                            | `spring-reactive-gateway/filter/GlobalLoggingFilter.java`                                        |
+| Named `GatewayFilterFactory` (pre-request enrichment)       | `spring-reactive-gateway/filter/PreFilterGatewayFilterFactory.java`                              |
+| Named `GatewayFilterFactory` (post-response timing)         | `spring-reactive-gateway/filter/PostFilterGatewayFilterFactory.java`                             |
+| Circuit breaker fallback controller                         | `spring-reactive-gateway/controller/FallbackController.java`                                     |
+| Resilience4j CB + time limiter configuration                | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
+| `httpclient` wiretap + connect/response timeout             | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
+| `StepVerifier` unit tests                                   | `FluxFlowTest.java`, `MonoFlowTest.java`, `CombineMonoFluxTest.java`                             |
+| `@WebFluxTest` controller slice tests                       | `MovieInfoControllerTest.java`, `ServerSentEventTest.java`                                       |
+| `@SpringBootTest` + Testcontainers                          | `MovieInfoControllerInt.java`, `ReviewInt.java`, `ReviewRepositoryInt.java`                      |
+| WireMock contract test                                      | `MoviesControllerWireMockInt.java`                                                               |
+| Actuator + Prometheus metrics                               | `application.yml` in each service + root `pom.xml`                                               |
+| Testcontainers macOS Docker Desktop fix                     | Root `pom.xml` Surefire `<argLine>` and `<environmentVariables>`                                 |
+| R2DBC reactive relational access                            | `spring-reactive-service-r2dbc/repository/GenreRepository.java`                                  |
+| Reactive transactions (`TransactionalOperator`)             | `spring-reactive-service-r2dbc/service/GenreService.java`                                        |
+| Reactive bulk insert (`saveAll(Flux<T>)`)                   | `GenreService.createBatch()`                                                                     |
+| MongoDB field projection (CQRS-lite read model)             | `spring-reactive-service-info/projection/MovieInfoProjectionRepository.java`                     |
+| Reactive cache-aside with Redis                             | `spring-reactive-service-info/cache/MovieInfoCacheService.java`                                  |
+| Transactional outbox pattern                                | `spring-reactive-service-info/outbox/OutboxService.java`, `OutboxEvent.java`                     |
+| Reactive WebSocket (bidirectional, shared sink)             | `spring-reactive-service-info/websocket/MovieInfoWebSocketHandler.java`                          |
+| Reactor `Context` → SLF4J `MDC` bridging                    | `spring-reactive-service-info/util/ReactiveLogger.java`                                          |
+| `WebFilter` request-id propagation via Reactor `Context`    | `spring-reactive-gateway/filter/RequestIdWebFilter.java`                                         |
+| JWT authentication at the gateway edge                      | `spring-reactive-gateway/filter/JwtAuthenticationWebFilter.java`, `TokenUtil.java`               |
+| Redis-backed distributed rate limiting                      | `spring-reactive-gateway/config/RateLimiterConfig.java` + `application.yml` `RequestRateLimiter` |
+| Canary / weighted routing                                   | `spring-reactive-gateway/src/main/resources/application.yml` — `Weight=movie-info-group` routes  |
+| Resilience4j bulkhead (semaphore + thread-pool)             | `spring-reactive-gateway/src/main/resources/application.yml`                                     |

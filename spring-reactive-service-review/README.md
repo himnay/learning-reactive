@@ -142,11 +142,11 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
 
 `ErrorWebExceptionHandler` sits below the `DispatcherHandler`/routing layer entirely — it intercepts *any* unhandled exception that escapes a `RouterFunction`'s handler chain, regardless of whether the app is written functionally or with annotations. This module writes the response body directly to a `DataBuffer` rather than returning a typed object, because at this layer there is no content-negotiation/`HttpMessageWriter` machinery available the way there is inside a normal handler method — it is working one level closer to the raw `ServerWebExchange`.
 
-| Exception | Meaning | Status |
-|---|---|---|
-| `ReviewDataException` | Bean Validation failed (thrown by `ReviewValidator`) | `400 Bad Request` |
-| `ReviewNotFoundException` | `reviewId` (or `movieInfoId`) not found in MongoDB | `404 Not Found` |
-| anything else | Unexpected failure | `500 Internal Server Error` |
+| Exception                 | Meaning                                              | Status                      |
+|---------------------------|------------------------------------------------------|-----------------------------|
+| `ReviewDataException`     | Bean Validation failed (thrown by `ReviewValidator`) | `400 Bad Request`           |
+| `ReviewNotFoundException` | `reviewId` (or `movieInfoId`) not found in MongoDB   | `404 Not Found`             |
+| anything else             | Unexpected failure                                   | `500 Internal Server Error` |
 
 ## 5. SSE with `Sinks.many().replay().latest()`
 
@@ -164,16 +164,16 @@ Contrast this with the info service's `Sinks.many().replay().all()` (root README
 
 ## 6. Endpoints
 
-| Method | Path | Description | Body | Response |
-|---|---|---|---|---|
-| POST | `/v1/reviews` | Create a review | `ReviewDocument` JSON | `201 Created` |
-| GET | `/v1/reviews` | List all reviews | — | `200 OK` array |
-| GET | `/v1/reviews?movieInfoId=123` | Reviews for one movie | — | `200 OK` filtered array, or `404` if none exist |
-| GET | `/v1/reviews/{reviewId}` | Get one review by ID | — | `200 OK` or `404` |
-| PUT | `/v1/reviews/{reviewId}` | Update comment and rating | `ReviewDocument` JSON | `200 OK` or `404` |
-| DELETE | `/v1/reviews/{reviewId}` | Delete a review | — | `204 No Content` |
-| GET | `/v1/reviews/stream` | SSE — most recent review + live updates | — | `application/x-ndjson` |
-| GET | `/v1/helloworld` | Smoke-test route, outside the `/v1/reviews` nest | — | `200 OK` `"helloworld"` |
+| Method | Path                          | Description                                      | Body                  | Response                                        |
+|--------|-------------------------------|--------------------------------------------------|-----------------------|-------------------------------------------------|
+| POST   | `/v1/reviews`                 | Create a review                                  | `ReviewDocument` JSON | `201 Created`                                   |
+| GET    | `/v1/reviews`                 | List all reviews                                 | —                     | `200 OK` array                                  |
+| GET    | `/v1/reviews?movieInfoId=123` | Reviews for one movie                            | —                     | `200 OK` filtered array, or `404` if none exist |
+| GET    | `/v1/reviews/{reviewId}`      | Get one review by ID                             | —                     | `200 OK` or `404`                               |
+| PUT    | `/v1/reviews/{reviewId}`      | Update comment and rating                        | `ReviewDocument` JSON | `200 OK` or `404`                               |
+| DELETE | `/v1/reviews/{reviewId}`      | Delete a review                                  | —                     | `204 No Content`                                |
+| GET    | `/v1/reviews/stream`          | SSE — most recent review + live updates          | —                     | `application/x-ndjson`                          |
+| GET    | `/v1/helloworld`              | Smoke-test route, outside the `/v1/reviews` nest | —                     | `200 OK` `"helloworld"`                         |
 
 `ReviewDocument` schema:
 ```json
