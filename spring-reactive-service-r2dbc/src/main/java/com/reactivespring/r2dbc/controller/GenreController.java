@@ -35,15 +35,15 @@ public class GenreController {
         return genreService.search(name);
     }
 
-    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Mono<Genre> create(@RequestBody @Valid Genre genre) {
         return genreService.create(genre);
     }
 
     // Bulk insert — accepts a JSON array; internally uses Flux<T> for streaming insert
-    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/batch")
+    @ResponseStatus(HttpStatus.CREATED)
     public Flux<Genre> createBatch(@RequestBody List<@Valid Genre> genres) {
         return genreService.createBatch(genres);
     }
@@ -53,8 +53,8 @@ public class GenreController {
         return genreService.update(id, genre);
     }
 
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(@PathVariable Long id) {
         return genreService.delete(id);
     }

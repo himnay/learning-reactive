@@ -20,8 +20,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 
-@SpringBootTest(webEnvironment = RANDOM_PORT, classes = R2dbcServiceApplication.class)
 @Testcontainers
+@SpringBootTest(webEnvironment = RANDOM_PORT, classes = R2dbcServiceApplication.class)
 class GenreControllerIntTest {
 
     @Container

@@ -10,8 +10,8 @@ import org.springframework.data.mongodb.core.CollectionOptions;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
 @EnableScheduling
+@SpringBootApplication
 class MoviesInfoServiceApplication {
 
     private static final Logger log = LoggerFactory.getLogger(MoviesInfoServiceApplication.class);
