@@ -12,6 +12,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class ReactiveRedisConfig {
 
+    /** Defines the movie info redis template bean. */
     @Bean
     public ReactiveRedisTemplate<String, MovieInfoDocument> movieInfoRedisTemplate(
             ReactiveRedisConnectionFactory factory) {

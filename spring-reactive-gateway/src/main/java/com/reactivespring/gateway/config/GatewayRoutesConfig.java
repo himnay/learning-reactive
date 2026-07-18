@@ -24,6 +24,7 @@ public class GatewayRoutesConfig {
     @Value("${services.movies-url:http://localhost:8082}")
     private String moviesServiceUrl;
 
+    /** Defines the gateway route locator bean. */
     @Bean
     public RouteLocator gatewayRouteLocator(RouteLocatorBuilder builder) {
         return builder.routes()

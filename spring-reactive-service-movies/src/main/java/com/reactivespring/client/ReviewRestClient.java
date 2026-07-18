@@ -30,6 +30,7 @@ public class ReviewRestClient {
         this.reviewsUrl = reviewsUrl;
     }
 
+    /** Returns the retrieve reviews. */
     public Flux<Review> retrieveReviews(String movieId) {
         URI reviewUri = UriComponentsBuilder.fromUriString(reviewsUrl)
                 .queryParam("movieInfoId", movieId)

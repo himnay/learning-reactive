@@ -23,6 +23,7 @@ public class ReviewValidator {
         this.validator = validator;
     }
 
+    /** Validates. */
     public void validate(ReviewDocument reviewDocument) {
         Set<ConstraintViolation<ReviewDocument>> violations = validator.validate(reviewDocument);
         if (!violations.isEmpty()) {

@@ -19,6 +19,7 @@ public class ReviewRouter {
         this.reviewHandler = reviewHandler;
     }
 
+    /** Defines the review router function bean. */
     @Bean
     public RouterFunction<ServerResponse> reviewRouterFunction() {
         return route()

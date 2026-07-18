@@ -15,6 +15,7 @@ public record Genre(
         @CreatedDate LocalDateTime createdAt
 ) {
     // Compact constructor for creating new instances without an ID (before insert)
+    /** Returns the of. */
     public static Genre of(String name, String description) {
         return new Genre(null, name, description, null);
     }

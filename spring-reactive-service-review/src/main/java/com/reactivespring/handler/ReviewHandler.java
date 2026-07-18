@@ -27,6 +27,7 @@ public class ReviewHandler {
         this.reviewRepository = reviewRepository;
     }
 
+    /** Adds review. */
     public Mono<ServerResponse> addReview(ServerRequest request) {
         return request.bodyToMono(ReviewDocument.class)
                 .doOnNext(reviewValidator::validate)
@@ -50,6 +51,7 @@ public class ReviewHandler {
         return ServerResponse.ok().body(reviewRepository.findAll(), ReviewDocument.class);
     }
 
+    /** Returns the upsert review. */
     public Mono<ServerResponse> upsertReview(ServerRequest request) {
         var reviewId = request.pathVariable("reviewId");
         return reviewRepository.findById(reviewId)
@@ -65,6 +67,7 @@ public class ReviewHandler {
                 .log();
     }
 
+    /** Deletes review. */
     public Mono<ServerResponse> deleteReview(ServerRequest request) {
         return reviewRepository.deleteById(request.pathVariable("reviewId"))
                 .then(ServerResponse.noContent().build());

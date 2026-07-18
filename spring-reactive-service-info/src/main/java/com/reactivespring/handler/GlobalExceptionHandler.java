@@ -16,6 +16,7 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /** Handles request body error. */
     @ExceptionHandler(WebExchangeBindException.class)
     public ResponseEntity<String> handleRequestBodyError(WebExchangeBindException ex) {
         log.error("Validation exception: {}", ex.getMessage());

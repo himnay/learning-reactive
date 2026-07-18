@@ -20,6 +20,7 @@ public class FallbackController {
 
     private static final Logger log = LoggerFactory.getLogger(FallbackController.class);
 
+    /** Returns the movie info fallback. */
     @GetMapping("/movieInfo")
     public Mono<ResponseEntity<String>> movieInfoFallback() {
         log.warn("Circuit breaker open — Movie Info Service unavailable");
@@ -28,6 +29,7 @@ public class FallbackController {
                 .body("Movie Info Service is temporarily unavailable. Please try again later."));
     }
 
+    /** Returns the reviews fallback. */
     @GetMapping("/reviews")
     public Mono<ResponseEntity<String>> reviewsFallback() {
         log.warn("Circuit breaker open — Reviews Service unavailable");
@@ -36,6 +38,7 @@ public class FallbackController {
                 .body("Reviews Service is temporarily unavailable. Please try again later."));
     }
 
+    /** Returns the movies fallback. */
     @GetMapping("/movies")
     public Mono<ResponseEntity<String>> moviesFallback() {
         log.warn("Circuit breaker open — Movies Service unavailable");

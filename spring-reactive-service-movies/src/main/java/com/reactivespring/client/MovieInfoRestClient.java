@@ -30,6 +30,7 @@ public class MovieInfoRestClient {
         this.movieInfoUrl = movieInfoUrl;
     }
 
+    /** Returns the retrieve movie info. */
     public Mono<MovieInfo> retrieveMovieInfo(String movieId) {
         return webClient
                 .get()
@@ -59,6 +60,7 @@ public class MovieInfoRestClient {
                 .log();
     }
 
+    /** Returns the retrieve movie info stream. */
     public Flux<MovieInfo> retrieveMovieInfoStream() {
         return webClient
                 .get()

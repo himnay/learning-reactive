@@ -22,12 +22,14 @@ class MoviesInfoServiceApplication {
         this.mongoTemplate = mongoTemplate;
     }
 
+    /** Application entry point. */
     public static void main(String[] args) {
         SpringApplication.run(MoviesInfoServiceApplication.class, args);
     }
 
     // Tailable cursors require a capped collection. Create it on startup if absent.
     // Max size 1MB — oldest documents are evicted when the cap is reached.
+    /** Creates capped collection. */
     @EventListener(ApplicationReadyEvent.class)
     public void createCappedCollection() {
         mongoTemplate.collectionExists("movieInfoDocument")

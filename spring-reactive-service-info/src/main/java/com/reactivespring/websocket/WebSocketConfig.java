@@ -11,6 +11,7 @@ import java.util.Map;
 @Configuration
 public class WebSocketConfig {
 
+    /** Defines the web socket handler mapping bean. */
     @Bean
     public HandlerMapping webSocketHandlerMapping(MovieInfoWebSocketHandler handler) {
         // SimpleUrlHandlerMapping wires URL paths to WebSocketHandler beans.

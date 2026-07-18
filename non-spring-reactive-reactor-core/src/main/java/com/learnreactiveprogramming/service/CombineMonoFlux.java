@@ -10,6 +10,7 @@ public class CombineMonoFlux {
     // concatenation of streams happens in sequence
     // first one is subscribed first and completes
     // second one is subscribed after that and completes
+    /** Concats flux stream publisher. */
     public Flux<String> concatFluxStreamPublisher() {
         Flux<String> fluxOne = Flux.just("A", "B", "C", "D");
         Flux<String> fluxTwo = Flux.just("E", "F", "G", "H");
@@ -18,6 +19,7 @@ public class CombineMonoFlux {
     }
 
     // concatWith() flux stream
+    /** Concats with flux stream publisher. */
     public Flux<String> concatWithFluxStreamPublisher() {
         Flux<String> fluxOne = Flux.just("A", "B", "C", "D");
         Flux<String> fluxTwo = Flux.just("E", "F", "G", "H");
@@ -26,6 +28,7 @@ public class CombineMonoFlux {
     }
 
     // concatWith() mono stream
+    /** Concats with mono stream publisher. */
     public Flux<String> concatWithMonoStreamPublisher() {
         Mono<String> monoOne = Mono.just("A");
         Mono<String> monoTwo = Mono.just("B");
@@ -34,6 +37,7 @@ public class CombineMonoFlux {
     }
 
     // merge() flux stream
+    /** Merges flux stream publisher. */
     public Flux<String> mergeFluxStreamPublisher() {
         Flux<String> fluxOne = Flux.just("A", "B", "C", "D").delayElements(Duration.ofMillis(100));
         Flux<String> fluxTwo = Flux.just("E", "F", "G", "H").delayElements(Duration.ofMillis(120));
@@ -42,6 +46,7 @@ public class CombineMonoFlux {
     }
 
     // mergeWith() flux stream
+    /** Merges with flux stream publisher. */
     public Flux<String> mergeWithFluxStreamPublisher() {
         Flux<String> fluxOne = Flux.just("A", "B", "C", "D").delayElements(Duration.ofMillis(100));
         Flux<String> fluxTwo = Flux.just("E", "F", "G", "H").delayElements(Duration.ofMillis(120));
@@ -50,6 +55,7 @@ public class CombineMonoFlux {
     }
 
     // mergeWith() mono stream
+    /** Merges with mono stream publisher. */
     public Flux<String> mergeWithMonoStreamPublisher() {
         Mono<String> monoOne = Mono.just("A");
         Mono<String> monoTwo = Mono.just("B");
@@ -58,6 +64,7 @@ public class CombineMonoFlux {
     }
 
     // mergeSequential() flux stream
+    /** Merges sequential flux stream publisher. */
     public Flux<String> mergeSequentialFluxStreamPublisher() {
         Flux<String> fluxOne = Flux.just("A", "B", "C", "D").delayElements(Duration.ofMillis(100));
         Flux<String> fluxTwo = Flux.just("E", "F", "G", "H").delayElements(Duration.ofMillis(120));
@@ -66,6 +73,7 @@ public class CombineMonoFlux {
     }
 
     // zip() flux stream
+    /** Returns the zip flux stream publisher. */
     public Flux<String> zipFluxStreamPublisher() {
         Flux<String> fluxOne = Flux.just("A", "B", "C", "D");
         Flux<String> fluxTwo = Flux.just("E", "F", "G", "H");
@@ -74,6 +82,7 @@ public class CombineMonoFlux {
     }
 
     // zip() flux stream
+    /** Returns the zip multiple flux stream publisher. */
     public Flux<String> zipMultipleFluxStreamPublisher() {
         Flux<String> fluxOne = Flux.just("A", "B", "C", "D");
         Flux<String> fluxTwo = Flux.just("E", "F", "G", "H");
@@ -86,6 +95,7 @@ public class CombineMonoFlux {
     }
 
     // zipWith() flux stream
+    /** Returns the zip with flux stream publisher. */
     public Flux<String> zipWithFluxStreamPublisher() {
         Flux<String> fluxOne = Flux.just("A", "B", "C", "D");
         Flux<String> fluxTwo = Flux.just("E", "F", "G", "H");
@@ -94,6 +104,7 @@ public class CombineMonoFlux {
     }
 
     // zipWith() mono stream
+    /** Returns the zip with mono stream publisher. */
     public Mono<String> zipWithMonoStreamPublisher() {
         Mono<String> monoOne = Mono.just("A");
         Mono<String> monoTwo = Mono.just("B");

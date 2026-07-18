@@ -37,6 +37,7 @@ public class RecursiveOperators {
      */
     record FileNode(String path, List<String> children) {}
 
+    /** Returns the directory traversal. */
     public Flux<String> directoryTraversal() {
         FileNode root = new FileNode("/root", List.of("/root/a", "/root/b"));
         FileNode a    = new FileNode("/root/a", List.of());

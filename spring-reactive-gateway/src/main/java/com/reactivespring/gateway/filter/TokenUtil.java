@@ -17,6 +17,7 @@ public final class TokenUtil {
 
     private TokenUtil() {}
 
+    /** Returns the signing key. */
     public static SecretKey signingKey(String secret) {
         // Keys.hmacShaKeyFor requires at least 32 bytes for HS256
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

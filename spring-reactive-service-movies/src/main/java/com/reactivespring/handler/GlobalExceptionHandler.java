@@ -16,24 +16,28 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /** Handles movies info client exception. */
     @ExceptionHandler(MoviesInfoClientException.class)
     public ResponseEntity<String> handleMoviesInfoClientException(MoviesInfoClientException ex) {
         log.error("MoviesInfoClientException: {}", ex.getMessage());
         return ResponseEntity.status(ex.getStatusCode()).body(ex.getMessage());
     }
 
+    /** Handles movies info server exception. */
     @ExceptionHandler(MoviesInfoServerException.class)
     public ResponseEntity<String> handleMoviesInfoServerException(MoviesInfoServerException ex) {
         log.error("MoviesInfoServerException: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
     }
 
+    /** Handles reviews client exception. */
     @ExceptionHandler(ReviewsClientException.class)
     public ResponseEntity<String> handleReviewsClientException(ReviewsClientException ex) {
         log.error("ReviewsClientException: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 
+    /** Handles reviews server exception. */
     @ExceptionHandler(ReviewsServerException.class)
     public ResponseEntity<String> handleReviewsServerException(ReviewsServerException ex) {
         log.error("ReviewsServerException: {}", ex.getMessage());

@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 class ReactiveGatewayApplication {
 
+    /** Application entry point. */
     public static void main(String[] args) {
         SpringApplication.run(ReactiveGatewayApplication.class, args);
     }

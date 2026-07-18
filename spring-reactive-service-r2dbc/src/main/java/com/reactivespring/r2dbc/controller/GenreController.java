@@ -20,21 +20,25 @@ public class GenreController {
         this.genreService = genreService;
     }
 
+    /** Finds all. */
     @GetMapping
     public Flux<Genre> findAll() {
         return genreService.findAll();
     }
 
+    /** Finds by id. */
     @GetMapping("/{id}")
     public Mono<Genre> findById(@PathVariable Long id) {
         return genreService.findById(id);
     }
 
+    /** Searches. */
     @GetMapping("/search")
     public Flux<Genre> search(@RequestParam String name) {
         return genreService.search(name);
     }
 
+    /** Creates. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<Genre> create(@RequestBody @Valid Genre genre) {
@@ -42,17 +46,20 @@ public class GenreController {
     }
 
     // Bulk insert — accepts a JSON array; internally uses Flux<T> for streaming insert
+    /** Creates batch. */
     @PostMapping("/batch")
     @ResponseStatus(HttpStatus.CREATED)
     public Flux<Genre> createBatch(@RequestBody List<@Valid Genre> genres) {
         return genreService.createBatch(genres);
     }
 
+    /** Updates. */
     @PutMapping("/{id}")
     public Mono<Genre> update(@PathVariable Long id, @RequestBody @Valid Genre genre) {
         return genreService.update(id, genre);
     }
 
+    /** Deletes. */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(@PathVariable Long id) {
