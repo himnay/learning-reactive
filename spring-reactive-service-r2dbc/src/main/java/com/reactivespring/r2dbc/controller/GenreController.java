@@ -45,12 +45,17 @@ public class GenreController {
         return genreService.create(genre);
     }
 
-    // Bulk insert — accepts a JSON array; internally uses Flux<T> for streaming insert
+    // Bulk insert — accepts a JSON array. collectList() (not a raw Flux<T> return) is required
+    // here: WebFlux commits the HTTP response status on the FIRST emitted element of a streamed
+    // Flux<T> body, before the rest of the pipeline (including the transactional rollback) has
+    // even run — a mid-stream failure would otherwise surface as a truncated 201 instead of a
+    // clean error status. Buffering into Mono<List<Genre>> defers the status commit until the
+    // whole transactional pipeline has resolved, one way or the other.
     /** Creates batch. */
     @PostMapping("/batch")
     @ResponseStatus(HttpStatus.CREATED)
-    public Flux<Genre> createBatch(@RequestBody List<@Valid Genre> genres) {
-        return genreService.createBatch(genres);
+    public Mono<List<Genre>> createBatch(@RequestBody List<@Valid Genre> genres) {
+        return genreService.createBatch(genres).collectList();
     }
 
     /** Updates. */

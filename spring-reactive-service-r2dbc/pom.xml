@@ -61,6 +61,14 @@
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Provides org.testcontainers.r2dbc.R2DBCDatabaseContainer — Spring Boot's r2dbc
+             ServiceConnection auto-configuration needs this to derive an r2dbc:// URL from the
+             plain PostgreSQLContainer above; postgresql alone isn't enough. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>r2dbc</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -69,6 +77,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Provides @AutoConfigureWebTestClient — Boot 4.1 split this out of starter-test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webtestclient</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
