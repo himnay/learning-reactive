@@ -11,7 +11,6 @@ import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTest
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -77,9 +76,9 @@ class MovieInfoControllerInt {
     @Test
     @DisplayName("GET /v1/movieInfos?year=2012 — filters by year")
     void getAllMoviesByYearTest() {
-        var uri = UriComponentsBuilder.fromUriString("/v1/movieInfos")
-                .queryParam("year", 2012).buildAndExpand().toUri();
-        webTestClient.get().uri(uri).exchange()
+        webTestClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/v1/movieInfos").queryParam("year", 2012).build())
+                .exchange()
                 .expectStatus().is2xxSuccessful()
                 .expectBodyList(MovieInfoDocument.class)
                 .consumeWith(resp -> assertThat(resp.getResponseBody()).hasSize(2));
@@ -88,9 +87,9 @@ class MovieInfoControllerInt {
     @Test
     @DisplayName("GET /v1/movieInfos?name=Batman Begins — filters by name")
     void getAllMoviesByNameTest() {
-        var uri = UriComponentsBuilder.fromUriString("/v1/movieInfos")
-                .queryParam("name", "Batman Begins").buildAndExpand().toUri();
-        webTestClient.get().uri(uri).exchange()
+        webTestClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/v1/movieInfos").queryParam("name", "Batman Begins").build())
+                .exchange()
                 .expectStatus().is2xxSuccessful()
                 .expectBodyList(MovieInfoDocument.class)
                 .consumeWith(resp -> assertThat(resp.getResponseBody()).hasSize(1));

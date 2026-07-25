@@ -1,6 +1,10 @@
 package com.reactivespring;
 
 import com.reactivespring.entity.MovieInfoDocument;
+import com.reactivespring.outbox.OutboxEvent;
+import com.reactivespring.outbox.OutboxService;
+import com.reactivespring.projection.MovieInfoProjectionRepository;
+import com.reactivespring.repository.MovieInfoRepository;
 import com.reactivespring.router.MovieInfoController;
 import com.reactivespring.service.MovieInfoService;
 import org.junit.jupiter.api.DisplayName;
@@ -18,9 +22,15 @@ import java.util.List;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+// @WebFluxTest only loads the web layer (MovieInfoController + web autoconfiguration) — it does
+// NOT bring up the data layer, so every non-web bean the controller's constructor needs
+// (MovieInfoService, OutboxService, MovieInfoProjectionRepository, MovieInfoRepository) must be
+// supplied as a @MockitoBean here rather than resolved from a real ReactiveMongoTemplate-backed
+// context.
 @WebFluxTest(controllers = MovieInfoController.class)
 class MovieInfoControllerTest {
 
@@ -29,6 +39,15 @@ class MovieInfoControllerTest {
 
     @MockitoBean
     private MovieInfoService movieInfoService;
+
+    @MockitoBean
+    private OutboxService outboxService;
+
+    @MockitoBean
+    private MovieInfoProjectionRepository movieInfoProjectionRepository;
+
+    @MockitoBean
+    private MovieInfoRepository movieInfoRepository;
 
     @Test
     @DisplayName("GET /v1/flux — returns 3 elements")
@@ -103,6 +122,10 @@ class MovieInfoControllerTest {
     void createMovieInfoTest() {
         var movieInfo = new MovieInfoDocument("abc", "Dark Knight Rises", 2012, List.of("Christian Bale", "Tom Hardy"), LocalDate.parse("2012-07-20"));
         when(movieInfoService.createMovieInfo(eq(movieInfo))).thenReturn(Mono.just(movieInfo));
+        // Controller chains outboxService.saveEvent(...).thenReturn(saved) after the create —
+        // an unstubbed mock returns null here and NPEs the reactive chain, so it must be stubbed.
+        when(outboxService.saveEvent(anyString(), anyString(), anyString()))
+                .thenReturn(Mono.just(new OutboxEvent("evt-1", "abc", "MOVIE_CREATED", movieInfo.name(), OutboxEvent.PENDING, java.time.Instant.now())));
 
         StepVerifier.create(webTestClient.post().uri("/v1/movieInfo")
                         .bodyValue(movieInfo).exchange()

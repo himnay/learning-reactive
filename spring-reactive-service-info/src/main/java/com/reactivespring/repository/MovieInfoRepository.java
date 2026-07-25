@@ -14,7 +14,7 @@ public interface MovieInfoRepository extends ReactiveMongoRepository<MovieInfoDo
     Flux<MovieInfoDocument> findByName(String name);
 
     // Tailable cursor — streams new inserts in real-time from a capped collection.
-    // Requires the collection to be created as capped (done in MoviesInfoServiceApplication).
+    // Requires the collection to be created as capped (done in MovieInfoCappedCollectionInitializer).
     @Tailable
     Flux<MovieInfoDocument> findWithTailableCursorBy();
 }
