@@ -4,12 +4,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!--
-        Corporate parent POM.  super-pom itself inherits spring-boot-starter-parent:4.1.0
-        and imports llm-bom (Spring Boot 4.1.0, Spring Cloud 2025.1.2).
-        This module pins its own Spring Boot / Cloud versions below so it stays on the
-        3.4.x train until a deliberate upgrade is made.
-    -->
     <parent>
         <groupId>com.org.llm</groupId>
         <artifactId>super-pom</artifactId>
@@ -24,7 +18,6 @@
     <name>learning-reactive-parent</name>
     <description>Root POM — shared dependency management for all reactive service modules</description>
 
-    <!-- ── Sub-modules ── -->
     <modules>
         <module>non-spring-reactive-reactor-core</module>
         <module>spring-reactive-service-info</module>
@@ -34,7 +27,6 @@
         <module>spring-reactive-service-r2dbc</module>
     </modules>
 
-    <!-- ── Version overrides (super-pom sets java=21, spring-boot=4.1.0, spring-cloud=2025.1.2) ── -->
     <properties>
         <java.version>25</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
@@ -44,12 +36,6 @@
         <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
-    <!--
-        Spring Boot is inherited from super-pom → llm-bom (4.1.0 + spring-framework 7.x).
-        Spring Cloud BOM is imported explicitly to version-manage gateway and contract modules.
-        Do NOT import spring-boot-dependencies here — it would downgrade spring-framework
-        to an incompatible version (6.x vs the 7.x that spring-boot 4.1.0 requires).
-    -->
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -67,7 +53,6 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- JWT — compile API only; impl+jackson are runtime -->
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
                 <artifactId>jjwt-api</artifactId>
@@ -91,12 +76,6 @@
     <build>
         <pluginManagement>
             <plugins>
-                <!--
-                    Pin spring-boot-maven-plugin to 3.4.4.
-                    super-pom inherits the plugin from spring-boot-starter-parent:4.1.0,
-                    so without this override the 4.1.0 plugin would be used at package time.
-                    Child pluginManagement takes precedence over the parent chain.
-                -->
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
@@ -108,7 +87,6 @@
                                 <goal>repackage</goal>
                             </goals>
                         </execution>
-                        <!-- build-info inherited from super-pom's <build><plugins> block -->
                     </executions>
                 </plugin>
 
@@ -118,7 +96,6 @@
                     <version>3.6.0</version>
                 </plugin>
 
-                <!-- Skip git-commit-id until the repo has an initial commit -->
                 <plugin>
                     <groupId>io.github.git-commit-id</groupId>
                     <artifactId>git-commit-id-maven-plugin</artifactId>
@@ -130,14 +107,6 @@
         </pluginManagement>
 
         <plugins>
-            <!--
-                Override maven-compiler-plugin configuration inherited from super-pom.
-                super-pom configures annotation processor paths for Lombok + Boot config
-                processor.  This project uses Java records instead of Lombok, so those
-                paths must be removed to avoid a compilation failure on a missing
-                Lombok artifact.  combine.self="override" replaces the parent's
-                <configuration> block entirely rather than merging into it.
-            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -145,8 +114,6 @@
                     <release>${maven.compiler.release}</release>
                     <parameters>true</parameters>
                     <annotationProcessorPaths>
-                        <!-- spring-boot-configuration-processor only: generates IDE hints for
-                             @ConfigurationProperties classes.  No Lombok — project uses records. -->
                         <path>
                             <groupId>org.springframework.boot</groupId>
                             <artifactId>spring-boot-configuration-processor</artifactId>
@@ -155,12 +122,6 @@
                 </configuration>
             </plugin>
 
-            <!--
-                Surefire configuration: shared across all modules.
-                - net.bytebuddy.experimental: Mockito needs this for Java 25 (class version 69)
-                - api.version: docker-java inside Testcontainers reads this; Docker Desktop 4.x
-                  requires API >= 1.40
-            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

@@ -16,25 +16,21 @@
     <description>Plain Reactor Core learning module — Flux, Mono, operators, StepVerifier</description>
 
     <dependencies>
-        <!-- ── Reactor Core ── -->
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
         </dependency>
 
-        <!-- ── Logging ── -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
 
-        <!-- ── Reactor BlockHound / Debug Agent ── -->
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-tools</artifactId>
         </dependency>
 
-        <!-- ── Test ── -->
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-test</artifactId>
@@ -64,7 +60,6 @@
 
     <build>
         <plugins>
-            <!-- Skip Spring Boot repackaging — this is not a Spring Boot app -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

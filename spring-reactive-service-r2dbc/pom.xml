@@ -23,8 +23,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-r2dbc</artifactId>
         </dependency>
-        <!-- r2dbc-postgresql: the reactive PostgreSQL driver.  1.0.x is the stable GA line
-             compatible with Spring Boot 3.x and PostgreSQL 14+. -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>r2dbc-postgresql</artifactId>
@@ -44,7 +42,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -55,15 +52,11 @@
             <artifactId>reactor-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Testcontainers PostgreSQL — @ServiceConnection auto-configures r2dbc url -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Provides org.testcontainers.r2dbc.R2DBCDatabaseContainer — Spring Boot's r2dbc
-             ServiceConnection auto-configuration needs this to derive an r2dbc:// URL from the
-             plain PostgreSQLContainer above; postgresql alone isn't enough. -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>r2dbc</artifactId>
@@ -79,7 +72,6 @@
             <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Provides @AutoConfigureWebTestClient — Boot 4.1 split this out of starter-test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-webtestclient</artifactId>

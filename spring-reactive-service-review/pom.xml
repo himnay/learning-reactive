@@ -15,7 +15,6 @@
     <description>Reactive Reviews Service — functional router/handler with MongoDB reactive and Sinks SSE</description>
 
     <dependencies>
-        <!-- ── Core ── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
@@ -29,7 +28,6 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- ── Observability ── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -40,7 +38,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- ── Developer tools ── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -48,7 +45,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- ── Test ── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -74,7 +70,6 @@
             <artifactId>reactor-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Testcontainers MongoDB (replaces Flapdoodle embedded) -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>mongodb</artifactId>
