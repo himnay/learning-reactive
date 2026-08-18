@@ -13,8 +13,10 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 import java.net.URI;
+import java.time.Duration;
 
 @Component
 public class ReviewRestClient {
@@ -54,6 +56,11 @@ public class ReviewRestClient {
                                 .flatMap(msg -> Mono.error(new ReviewsServerException(
                                         "Server error in ReviewService: " + msg))))
                 .bodyToFlux(Review.class)
+                // Retry up to 3 times on server errors with exponential backoff
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                        .filter(ex -> ex instanceof ReviewsServerException)
+                        .onRetryExhaustedThrow((spec, signal) ->
+                                signal.failure()))
                 .log();
     }
 }

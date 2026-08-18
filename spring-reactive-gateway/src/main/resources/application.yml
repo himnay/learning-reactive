@@ -39,14 +39,14 @@ spring:
         - id: movie-info-sse
           uri: ${services.info-url:http://localhost:8080}
           predicates:
-            - Path=/v1/movieInfoStream
+            - Path=/v1/movieInfo/stream
           filters:
             - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
 
         - id: movie-review-sse
           uri: ${services.review-url:http://localhost:8081}
           predicates:
-            - Path=/v1/reviewsStream
+            - Path=/v1/reviews/stream
           filters:
             - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
 
