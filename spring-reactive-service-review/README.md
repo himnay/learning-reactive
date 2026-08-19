@@ -1,4 +1,4 @@
-# spring-reactive-service-review
+# <span style="color:hsl(48,68%,32%)">spring-reactive-service-review</span>
 
 A reactive CRUD service for movie reviews, backed by MongoDB. Architecturally, this is the **deliberate counterpart** to `spring-reactive-service-info`: both are WebFlux + reactive MongoDB services doing similar CRUD + SSE work, but this module is written entirely in Spring WebFlux's **functional** style (`RouterFunction` + `Handler`) instead of the annotation-based `@RestController` style used by the info service. Read both modules side by side to see the same problem solved two different ways.
 
@@ -11,7 +11,7 @@ This document assumes you've read the root [`README.md`](../README.md) for gener
 
 ---
 
-## Table of Contents
+## <span style="color:hsl(81,68%,32%)">Table of Contents</span>
 
 1. [Functional Routing: Router + Handler](#1-functional-routing-router--handler)
 2. [Request Flow](#2-request-flow)
@@ -24,7 +24,7 @@ This document assumes you've read the root [`README.md`](../README.md) for gener
 
 ---
 
-## 1. Functional Routing: Router + Handler
+## <span style="color:hsl(113,68%,32%)">1. Functional Routing: Router + Handler</span>
 
 Spring WebFlux offers two ways to declare HTTP endpoints. `spring-reactive-service-info` uses the annotation-based style (`@RestController`, `@GetMapping`) — see the root README's [§9](../README.md#9-spring-webflux-deep-dive). This module uses the **functional** style instead: routes are declared as data (a `RouterFunction<ServerResponse>` bean), and request handling logic lives in a separate `Handler` class with no Spring annotations on its methods at all.
 
@@ -64,7 +64,7 @@ public Mono<ServerResponse> addReview(ServerRequest request) {
 
 **Why this style, and when to prefer it over annotations:** functional routing makes the entire route table visible in one place as ordinary Java — no scanning for `@RequestMapping`-annotated classes, no reflection-based route resolution. It is also directly unit-testable: `reviewRouterFunction()` returns a plain `RouterFunction<ServerResponse>` you can invoke against a mock `ServerRequest` without booting any web server. The annotation style (used by the info service) reads more familiarly to anyone coming from Spring MVC and integrates more naturally with tools that inspect `@RequestMapping` metadata (like springdoc/OpenAPI generators).
 
-## 2. Request Flow
+## <span style="color:hsl(146,68%,32%)">2. Request Flow</span>
 
 ```mermaid
 sequenceDiagram
@@ -92,7 +92,7 @@ sequenceDiagram
 
 Every step in `addReview` is one non-blocking operator in a single chain: deserialize the body, validate (synchronously, but as a pipeline side-effect via `doOnNext`), save to MongoDB, publish to the SSE sink, then serialize the response. No step blocks the Netty event-loop thread — `bodyToMono`, `reviewRepository.save`, and `ServerResponse...bodyValue` are all asynchronous under the hood.
 
-## 3. Manual Validation Instead of `@Valid`
+## <span style="color:hsl(179,68%,36%)">3. Manual Validation Instead of `@Valid`</span>
 
 `ServerRequest.bodyToMono(...)` in functional routing does **not** trigger Spring's Bean Validation automatically — there is no controller-method parameter for `@Valid` to attach to. This module works around that with an explicit `ReviewValidator` component that runs Jakarta Bean Validation's `Validator` programmatically:
 
@@ -116,7 +116,7 @@ public class ReviewValidator {
 
 `ReviewDocument`'s constraints (`@NotNull` on `movieInfoId`, `@Min(0)` on `rating`) are ordinary Jakarta Validation annotations — the same annotation vocabulary as the info service's `@NotBlank`/`@Positive` on `MovieInfoDocument`. What differs is *who* triggers the check: in the annotation-based info service, `@Valid` on the controller parameter makes Spring do it; here, `ReviewHandler.addReview` explicitly calls `reviewValidator.validate(...)` inside a `.doOnNext(...)` step of its own pipeline. `ReviewValidator` throws a plain `RuntimeException` (`ReviewDataException`) rather than emitting a reactive error signal directly — Reactor treats an exception thrown from within an operator's lambda the same as an explicit `Mono.error(...)`, so it still propagates downstream as an error signal, just via a different syntax.
 
-## 4. Global Error Handling: `ErrorWebExceptionHandler`
+## <span style="color:hsl(212,68%,44%)">4. Global Error Handling: `ErrorWebExceptionHandler`</span>
 
 The info and movies services use `@RestControllerAdvice` + `@ExceptionHandler` for centralized error mapping — an annotation-based mechanism that only applies to annotated controller methods. Functional routing has no controller methods for `@ExceptionHandler` to attach to, so this module instead implements Spring WebFlux's lower-level `ErrorWebExceptionHandler` SPI directly:
 
@@ -148,7 +148,7 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
 | `ReviewNotFoundException` | `reviewId` (or `movieInfoId`) not found in MongoDB   | `404 Not Found`             |
 | anything else             | Unexpected failure                                   | `500 Internal Server Error` |
 
-## 5. SSE with `Sinks.many().replay().latest()`
+## <span style="color:hsl(244,68%,44%)">5. SSE with `Sinks.many().replay().latest()`</span>
 
 ```java
 private final Sinks.Many<ReviewDocument> reviewInfoSinks = Sinks.many().replay().latest();
@@ -162,7 +162,7 @@ public Mono<ServerResponse> getReviewsStream(ServerRequest request) {
 
 Contrast this with the info service's `Sinks.many().replay().all()` (root README [§10](../README.md#10-server-sent-events-and-sinks)): `replay().latest()` means a *new* SSE subscriber only receives the single most-recently-emitted review, plus everything emitted after it subscribes — not the full history since service startup. This is the right choice for a "what just happened" live feed where an unbounded replay buffer would otherwise grow forever; the info service's `replay().all()`, by contrast, is appropriate when new subscribers genuinely need the full event history (e.g., an audit trail). The output format also differs from the info service: this endpoint emits `application/x-ndjson` (newline-delimited raw JSON objects), not the `text/event-stream` framing (`id`/`event`/`data`) the info service now uses.
 
-## 6. Endpoints
+## <span style="color:hsl(277,68%,44%)">6. Endpoints</span>
 
 | Method | Path                          | Description                                      | Body                  | Response                                        |
 |--------|-------------------------------|--------------------------------------------------|-----------------------|-------------------------------------------------|
@@ -186,7 +186,7 @@ Contrast this with the info service's `Sinks.many().replay().all()` (root README
 ```
 `rating` must be `>= 0`; `movieInfoId` must be present. `reviewId` is server-generated (MongoDB `@Id`) — omit it on `POST`.
 
-### Example
+### <span style="color:hsl(310,68%,44%)">Example</span>
 
 ```bash
 # Prerequisite: MongoDB running (see root docker-compose.yml)
@@ -202,7 +202,7 @@ curl -N -H "Accept: application/x-ndjson" http://localhost:8081/v1/reviews/strea
 
 Calling this service through the gateway (`http://localhost:8765/v1/reviews/**`) instead of its own port additionally requires a `Bearer` JWT — see the root README's [§21 Running the Project](../README.md#21-running-the-project).
 
-## 7. Testing
+## <span style="color:hsl(343,68%,44%)">7. Testing</span>
 
 ```bash
 mvn test
@@ -224,7 +224,7 @@ mvn test
   ```
   `@ServiceConnection` auto-configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB instance — no hardcoded port in `application-test.yml`. This exercises the real `RouterFunction` → `ReviewHandler` → `ReviewRepository` chain end to end via `WebTestClient`, against a real (containerized) MongoDB.
 
-## 8. Running This Module
+## <span style="color:hsl(15,68%,44%)">8. Running This Module</span>
 
 ```bash
 # From this directory

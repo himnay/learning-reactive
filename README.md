@@ -1,4 +1,4 @@
-# Learning Reactive — Spring WebFlux & Project Reactor
+# <span style="color:hsl(136,68%,32%)">Learning Reactive — Spring WebFlux & Project Reactor</span>
 
 <img src="image/reactor-logo.png" alt="Project Reactor" width="90"/>
 
@@ -6,7 +6,7 @@ A production-grade, multi-module learning platform that explores every dimension
 
 ---
 
-## Table of Contents
+## <span style="color:hsl(139,68%,32%)">Table of Contents</span>
 
 1. 🔹 [What This Project Is](#1-what-this-project-is)
 2. 🧵 [Why Reactive Programming Exists](#2-why-reactive-programming-exists)
@@ -35,7 +35,7 @@ A production-grade, multi-module learning platform that explores every dimension
 ---
 
 <a id="1-what-this-project-is"></a>
-## 1. 🔹 What This Project Is
+## <span style="color:hsl(142,68%,32%)">1. 🔹 What This Project Is</span>
 
 This repository is a deliberate, end-to-end study of reactive programming in the Spring ecosystem. It is not a toy demo — every piece is production-grade: validation, global exception handling, circuit breakers, retry with exponential backoff, SSE streaming, Testcontainers integration tests, WireMock contract tests, Prometheus metrics, and a reactive API gateway.
 
@@ -84,9 +84,9 @@ flowchart TB
 ---
 
 <a id="2-why-reactive-programming-exists"></a>
-## 2. 🧵 Why Reactive Programming Exists
+## <span style="color:hsl(145,68%,32%)">2. 🧵 Why Reactive Programming Exists</span>
 
-### The Problem with Blocking I/O
+### <span style="color:hsl(148,68%,32%)">The Problem with Blocking I/O</span>
 
 A traditional Spring MVC application handles each HTTP request on a dedicated thread from a thread pool (typically Tomcat's, default 200 threads). While a request waits for a database query or a downstream HTTP call to return, that thread sits idle — it holds memory and a kernel scheduling slot but does no work.
 
@@ -100,7 +100,7 @@ Thread 200: ─── QUEUED — can't start until one of above finishes ──�
 
 Under high concurrency, all 200 threads are in a waiting state simultaneously. New requests queue or are rejected. The CPU is mostly idle even though the application is "busy". This is the C10k problem scaled up.
 
-### The Non-Blocking I/O Answer
+### <span style="color:hsl(151,68%,36%)">The Non-Blocking I/O Answer</span>
 
 Reactive / non-blocking I/O separates the thread that initiates I/O from the thread that handles the response. A small fixed thread pool (typically 1 thread per CPU core in Netty) handles all I/O. When a database or HTTP response arrives, it is dispatched on whichever thread is free.
 
@@ -111,7 +111,7 @@ Core 2: [req E start]→[handle response A]→[req F start]→[handle response B
 
 The same 8 cores handle thousands of concurrent connections. Threads are never idle-waiting. Memory usage is lower because fewer threads are alive.
 
-### When Reactive Wins
+### <span style="color:hsl(154,68%,36%)">When Reactive Wins</span>
 
 | Scenario                                               | Benefit                                                                |
 |--------------------------------------------------------|------------------------------------------------------------------------|
@@ -121,7 +121,7 @@ The same 8 cores handle thousands of concurrent connections. Threads are never i
 | High-throughput event pipelines                        | Backpressure prevents fast producer from overloading slow consumer     |
 | Microservice-to-microservice calls                     | WebClient is fully non-blocking; RestTemplate blocks a thread per call |
 
-### When Reactive Does NOT Win
+### <span style="color:hsl(156,68%,36%)">When Reactive Does NOT Win</span>
 
 <ul>
 
@@ -135,7 +135,7 @@ The same 8 cores handle thousands of concurrent connections. Threads are never i
 ---
 
 <a id="3-the-reactive-streams-specification"></a>
-## 3. 📨 The Reactive Streams Specification
+## <span style="color:hsl(159,68%,36%)">3. 📨 The Reactive Streams Specification</span>
 
 Reactive Streams (`org.reactivestreams`) is a JVM specification (not an implementation) that defines four interfaces:
 
@@ -148,18 +148,18 @@ Processor<T,R> — both Publisher and Subscriber (transformation stage)
 
 The specification is included in Java 9+ as `java.util.concurrent.Flow.*`. The critical rule is **backpressure**: a Subscriber controls how many items it receives by calling `subscription.request(n)`. The Publisher must not emit more than `n` items until the next `request(n)` call. This prevents a fast producer from overwhelming a slow consumer.
 
-### Why the Spec Matters
+### <span style="color:hsl(162,68%,36%)">Why the Spec Matters</span>
 
 The spec defines interoperability. Project Reactor, RxJava, Akka Streams, and Vert.x all implement the same four interfaces, so their streams can interoperate. Spring WebFlux uses Reactor but can accept any `Publisher<T>`.
 
 ---
 
 <a id="4-project-reactor--mono-and-flux"></a>
-## 4. 🧵 Project Reactor — Mono and Flux
+## <span style="color:hsl(165,68%,36%)">4. 🧵 Project Reactor — Mono and Flux</span>
 
 Project Reactor is Pivotal's (now VMware/Broadcom's) implementation of Reactive Streams. It is the reactive library that Spring WebFlux is built on.
 
-### Mono\<T\>
+### <span style="color:hsl(168,68%,36%)">Mono\<T\></span>
 
 `Mono<T>` is a Publisher that emits **0 or 1 items** then completes (or errors). Use it for:
 
@@ -177,7 +177,7 @@ Mono<MovieInfo> info   = repository.findById("abc123"); // 0 or 1 result
 Mono<Void>     deleted = repository.deleteById("abc123");
 ```
 
-### Flux\<T\>
+### <span style="color:hsl(171,68%,36%)">Flux\<T\></span>
 
 `Flux<T>` is a Publisher that emits **0 to N items** then completes (or errors). Use it for:
 
@@ -195,7 +195,7 @@ Flux<Movie>  allMovies = repository.findAll();            // N results
 Flux<Long>   ticker    = Flux.interval(Duration.ofSeconds(1)); // infinite
 ```
 
-### Cold vs Hot Publishers
+### <span style="color:hsl(174,68%,36%)">Cold vs Hot Publishers</span>
 
 **Cold** — each subscriber gets its own independent data stream starting from the beginning. A database query is cold: every subscriber triggers a fresh query.
 
@@ -210,9 +210,9 @@ Sinks.Many<MovieInfo> sink = Sinks.many().replay().all();
 Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future events
 ```
 
-### Operator Catalogue — What This Project Uses
+### <span style="color:hsl(177,68%,36%)">Operator Catalogue — What This Project Uses</span>
 
-#### Transformation
+#### <span style="color:hsl(180,68%,36%)">Transformation</span>
 
 | Operator    | What it does                                                           | Used where                                            |
 |-------------|------------------------------------------------------------------------|-------------------------------------------------------|
@@ -221,7 +221,7 @@ Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future e
 | `concatMap` | Like `flatMap` but preserves order (subscribes serially)               | `FluxFlow` — demonstrates ordering                    |
 | `transform` | Applies a reusable `Function<Flux<T>, Flux<R>>` to the pipeline        | `FluxFlow` — extract shared map+filter logic          |
 
-#### Filtering
+#### <span style="color:hsl(183,68%,36%)">Filtering</span>
 
 | Operator         | What it does                                                  |
 |------------------|---------------------------------------------------------------|
@@ -229,7 +229,7 @@ Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future e
 | `defaultIfEmpty` | Emit a static value if upstream completes empty               |
 | `switchIfEmpty`  | Subscribe to a fallback Publisher if upstream completes empty |
 
-#### Combination (demonstrated in `CombineMonoFlux`)
+#### <span style="color:hsl(186,68%,36%)">Combination (demonstrated in `CombineMonoFlux`)</span>
 
 | Operator                     | Behaviour                                                 | Order preserved? |
 |------------------------------|-----------------------------------------------------------|------------------|
@@ -238,7 +238,7 @@ Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future e
 | `Flux.mergeSequential`       | Subscribe to both immediately, emit in subscription order | Yes              |
 | `Flux.zip` / `zipWith`       | Pair items from N publishers by index                     | Yes              |
 
-#### Error Handling
+#### <span style="color:hsl(189,68%,36%)">Error Handling</span>
 
 | Operator        | Behaviour                                                   |
 |-----------------|-------------------------------------------------------------|
@@ -248,7 +248,7 @@ Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future e
 | `retryWhen`     | Resubscribe to upstream on error, with configurable backoff |
 | `doOnError`     | Side-effect on error (logging) — does not change the error  |
 
-#### Lifecycle Hooks
+#### <span style="color:hsl(192,68%,36%)">Lifecycle Hooks</span>
 
 ```java
 // Used throughout the codebase for logging and side-effects
@@ -259,7 +259,7 @@ Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future e
 .doOnSuccess(v   -> log.info("Mono emitted: {}", v))
 ```
 
-### The Subscription Contract
+### <span style="color:hsl(195,68%,36%)">The Subscription Contract</span>
 
 Nothing happens until someone subscribes. This is the single most important mental model shift from imperative programming.
 
@@ -278,9 +278,9 @@ In Spring WebFlux, the framework subscribes on your behalf when you return a `Mo
 ---
 
 <a id="5-system-architecture"></a>
-## 5. 🏗️ System Architecture
+## <span style="color:hsl(197,68%,36%)">5. 🏗️ System Architecture</span>
 
-### Runtime Topology
+### <span style="color:hsl(200,68%,44%)">Runtime Topology</span>
 
 Every external request enters through `spring-reactive-gateway` on port 8765. The gateway is the only component that should be addressed directly by a client; it fans requests out to whichever backend service owns that URL space, and it owns cross-cutting concerns — correlation IDs, JWT validation, rate limiting, circuit breaking — so individual services can stay focused on their own domain logic.
 
@@ -318,7 +318,7 @@ flowchart TB
 
 **Filter ordering on the gateway matters.** `RequestIdWebFilter` runs first so every downstream filter and log line can reference a stable request id. `JwtAuthenticationWebFilter` runs next (skipping `/actuator/**`, `/fallback/**`, `/v1/public/**`) and, on success, injects `X-User-Id` — which `RateLimiterConfig`'s `userKeyResolver` then uses to bucket rate limits per authenticated user rather than per IP. `GlobalLoggingFilter` wraps the remaining chain to log the full request/response cycle with timing.
 
-### Request Flow Through the Gateway
+### <span style="color:hsl(203,68%,44%)">Request Flow Through the Gateway</span>
 
 The sequence diagram below traces one representative reactive request end to end — `GET /v1/movies/{id}` — from the client, through the gateway's filter chain, into the movies aggregation service, out to two downstream WebClient calls, and back. Every arrow is non-blocking: no participant thread ever sits idle waiting on another.
 
@@ -357,9 +357,9 @@ Note that the two downstream calls in `MoviesController` are shown here as concu
 ---
 
 <a id="6-module-breakdown"></a>
-## 6. 🏗️ Module Breakdown
+## <span style="color:hsl(206,68%,44%)">6. 🏗️ Module Breakdown</span>
 
-### Module 1: `non-spring-reactive-reactor-core`
+### <span style="color:hsl(209,68%,44%)">Module 1: `non-spring-reactive-reactor-core`</span>
 
 **Purpose:** Learn raw Reactor operators with zero Spring context. All tests run synchronously using `StepVerifier` — no application server, no DI, no database.
 
@@ -385,7 +385,7 @@ concatMap(name → split chars + random delay):
 
 ---
 
-### Module 2: `spring-reactive-service-info`
+### <span style="color:hsl(212,68%,44%)">Module 2: `spring-reactive-service-info`</span>
 
 **Purpose:** A full CRUD reactive REST service with MongoDB persistence, field-level validation, global exception handling, and SSE streaming.
 
@@ -427,7 +427,7 @@ The info service is the most feature-dense module in the repo — beyond basic C
 
 ---
 
-### Module 3: `spring-reactive-service-review`
+### <span style="color:hsl(215,68%,44%)">Module 3: `spring-reactive-service-review`</span>
 
 **Purpose:** A reactive review service demonstrating the **functional router/handler** style of WebFlux routing, as an explicit contrast to the annotation-based style in the info service.
 
@@ -465,7 +465,7 @@ public Mono<ServerResponse> addReview(ServerRequest request) {
 
 ---
 
-### Module 4: `spring-reactive-service-movies`
+### <span style="color:hsl(218,68%,44%)">Module 4: `spring-reactive-service-movies`</span>
 
 **Purpose:** A pure aggregation service with NO database. Its only job is to make two non-blocking HTTP calls to the info and review services and combine their results into a single `Movie` response.
 
@@ -502,7 +502,7 @@ Mono.zip(
 
 ---
 
-### Module 5: `spring-reactive-service-r2dbc`
+### <span style="color:hsl(221,68%,44%)">Module 5: `spring-reactive-service-r2dbc`</span>
 
 **Purpose:** A CRUD service for a `Genre` entity backed by **PostgreSQL via R2DBC** — the reactive counterpart to the MongoDB modules. It exists specifically to contrast a reactive *relational* database driver against the reactive *document* drivers used elsewhere in the project, including how reactive transactions work when there is no shared-connection-per-thread assumption to lean on.
 
@@ -540,7 +540,7 @@ Unlike JPA/JDBC, R2DBC's `@Query` executes over the reactive PostgreSQL wire pro
 
 ---
 
-### Module 6: `spring-reactive-gateway`
+### <span style="color:hsl(224,68%,44%)">Module 6: `spring-reactive-gateway`</span>
 
 **Purpose:** The single entry point for all external traffic. Routes all calls to the correct backend service, enforces circuit breakers, validates JWTs, rate-limits per user via Redis, adds correlation and request IDs, applies request/response enrichment filters, supports canary/weighted routing, and exposes a Gateway-aware Actuator endpoint.
 
@@ -578,7 +578,7 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 ---
 
 <a id="7-technology-stack"></a>
-## 7. 🧰 Technology Stack
+## <span style="color:hsl(227,68%,44%)">7. 🧰 Technology Stack</span>
 
 | Technology                   | Version                      | Role                                                                                                                 |
 |------------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------|
@@ -605,13 +605,13 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 ---
 
 <a id="8-design-patterns-in-use"></a>
-## 8. 🏗️ Design Patterns in Use
+## <span style="color:hsl(230,68%,44%)">8. 🏗️ Design Patterns in Use</span>
 
-### Publisher–Subscriber
+### <span style="color:hsl(233,68%,44%)">Publisher–Subscriber</span>
 
 The foundational pattern. Every Reactor pipeline is a publisher chain. The framework (Spring WebFlux) is the subscriber. Application code only assembles the pipeline — it never explicitly subscribes.
 
-### Interface Segregation for Controllers
+### <span style="color:hsl(236,68%,44%)">Interface Segregation for Controllers</span>
 
 The info service defines a `MovieInfoApi` interface with all `@RequestMapping` annotations. The `MovieInfoController` implements it with zero Spring annotations of its own. This separates the HTTP contract (interface) from the implementation, making it possible to unit-test the controller logic with a mock `MovieInfoService` without any web context.
 
@@ -631,11 +631,11 @@ public class MovieInfoController implements MovieInfoApi {
 }
 ```
 
-### Functional Router/Handler (Command Pattern Variant)
+### <span style="color:hsl(238,68%,44%)">Functional Router/Handler (Command Pattern Variant)</span>
 
 The review service uses WebFlux's functional routing DSL. The `RouterFunction` is a pure function `(ServerRequest) → Optional<HandlerFunction>`. The `ReviewHandler` contains all business logic. This style is more composable and testable than annotation scanning — you can unit-test the handler by passing a `MockServerRequest` directly.
 
-### Sinks — Reactive Event Bus
+### <span style="color:hsl(241,68%,44%)">Sinks — Reactive Event Bus</span>
 
 `Sinks.Many<T>` acts as a programmatic event bus. Application code calls `sink.tryEmitNext(item)` from anywhere (typically in a `.doOnNext` side-effect); the sink's `asFlux()` provides the hot publisher that SSE connections subscribe to.
 
@@ -648,7 +648,7 @@ POST /v1/movieInfo
   All active GET /v1/movieInfo/stream subscribers receive the new document
 ```
 
-### Circuit Breaker (Stability Pattern)
+### <span style="color:hsl(244,68%,44%)">Circuit Breaker (Stability Pattern)</span>
 
 Wraps outbound calls from the gateway to backend services. When a backend fails repeatedly, the circuit opens and requests fail fast with a 503 fallback instead of waiting for timeout. The circuit transitions: `CLOSED → OPEN → HALF_OPEN → CLOSED` automatically.
 
@@ -658,7 +658,7 @@ OPEN      — all requests short-circuit to fallback; no downstream calls made
 HALF_OPEN — limited test calls forwarded to check if backend recovered
 ```
 
-### Retry with Exponential Backoff
+### <span style="color:hsl(247,68%,44%)">Retry with Exponential Backoff</span>
 
 The movies service retries failed calls to the info service up to 3 times with exponential backoff (1s, 2s, 4s). Retries only trigger on server errors — not client errors, because retrying a 400 Bad Request will always return 400.
 
@@ -668,7 +668,7 @@ The movies service retries failed calls to the info service up to 3 times with e
     .onRetryExhaustedThrow((spec, signal) -> signal.failure()))
 ```
 
-### Filter Chain (Chain of Responsibility)
+### <span style="color:hsl(250,68%,44%)">Filter Chain (Chain of Responsibility)</span>
 
 The gateway applies filters in strict order. Each filter calls `chain.filter(exchange)` to pass control to the next. Filters can act before (pre) or after (post) the downstream call using `.then()` or `doOnSuccess`.
 
@@ -677,7 +677,7 @@ Request:  GlobalLoggingFilter → CircuitBreakerFilter → PreFilter → DOWNSTR
 Response:                  GlobalLoggingFilter.doOnSuccess ← PostFilter ← DOWNSTREAM
 ```
 
-### Hybrid Route Definition
+### <span style="color:hsl(253,68%,44%)">Hybrid Route Definition</span>
 
 Routes are split across two mechanisms:
 
@@ -693,13 +693,13 @@ Both sets of routes are merged by Spring Cloud Gateway at startup.
 ---
 
 <a id="9-spring-webflux-deep-dive"></a>
-## 9. 🧵 Spring WebFlux Deep Dive
+## <span style="color:hsl(256,68%,44%)">9. 🧵 Spring WebFlux Deep Dive</span>
 
-### The Two Programming Models
+### <span style="color:hsl(259,68%,44%)">The Two Programming Models</span>
 
 WebFlux offers two distinct ways to write HTTP endpoints:
 
-#### Annotation-based (info service)
+#### <span style="color:hsl(262,68%,44%)">Annotation-based (info service)</span>
 
 Identical surface-level API to Spring MVC: `@RestController`, `@GetMapping`, `@RequestBody`, `@PathVariable`. The difference is that return types are `Mono<T>` or `Flux<T>` instead of `T` or `List<T>`.
 
@@ -714,7 +714,7 @@ public Mono<ResponseEntity<MovieInfoDocument>> getMovieInfo(@PathVariable String
 
 Spring WebFlux subscribes to the returned `Mono` and sends the response when it completes. The thread that received the HTTP request is released immediately — it does not wait for the DB response.
 
-#### Functional (review service)
+#### <span style="color:hsl(265,68%,44%)">Functional (review service)</span>
 
 Routes and handlers are Spring beans, not scanned classes. Routes are composed programmatically. This style is preferred when you need complex route composition, conditional routing, or want to test the routing logic in isolation.
 
@@ -735,7 +735,7 @@ public Mono<ServerResponse> addReview(ServerRequest req) {
 }
 ```
 
-### The Event Loop — How Netty Handles Concurrency
+### <span style="color:hsl(268,68%,44%)">The Event Loop — How Netty Handles Concurrency</span>
 
 WebFlux runs on Netty, an NIO event-loop server. Netty creates one thread per CPU core (the "event loop group"). All I/O happens on these threads asynchronously.
 
@@ -749,7 +749,7 @@ When an HTTP request arrives:
 
 **Critical rule:** Never block on an event-loop thread. Calling `Thread.sleep()`, a blocking JDBC query, or `Mono.block()` inside a reactive pipeline starves all other requests sharing that thread.
 
-### Schedulers — Switching Thread Contexts
+### <span style="color:hsl(271,68%,44%)">Schedulers — Switching Thread Contexts</span>
 
 When you must do blocking work inside a reactive pipeline (e.g., calling a legacy blocking library), you explicitly switch to a separate thread pool:
 
@@ -764,13 +764,13 @@ Mono.fromCallable(() -> legacyBlockingService.call())
 ---
 
 <a id="10-server-sent-events-and-sinks"></a>
-## 10. 🔹 Server-Sent Events and Sinks
+## <span style="color:hsl(274,68%,44%)">10. 🔹 Server-Sent Events and Sinks</span>
 
-### What is SSE?
+### <span style="color:hsl(276,68%,44%)">What is SSE?</span>
 
 Server-Sent Events (SSE) is an HTTP/1.1 protocol where the server sends a stream of `text/event-stream` or `application/x-ndjson` messages over a single persistent HTTP connection. The client receives each event as it arrives. Unlike WebSocket, SSE is unidirectional (server → client only) and uses plain HTTP — no upgrade handshake needed.
 
-### How This Project Implements SSE
+### <span style="color:hsl(279,68%,44%)">How This Project Implements SSE</span>
 
 Both the info and review services use `Sinks.Many<T>` as the SSE event source. Each service has one in-memory sink; SSE subscribers receive events from that sink.
 
@@ -807,7 +807,7 @@ public Mono<ServerResponse> getReviewsStream(ServerRequest request) {
 }
 ```
 
-### Sink Strategies Compared
+### <span style="color:hsl(282,68%,44%)">Sink Strategies Compared</span>
 
 | Strategy                             | New subscriber receives      | Use case                                       |
 |--------------------------------------|------------------------------|------------------------------------------------|
@@ -817,7 +817,7 @@ public Mono<ServerResponse> getReviewsStream(ServerRequest request) {
 | `multicast().onBackpressureBuffer()` | Only live events             | Real-time notifications                        |
 | `unicast()`                          | Only live, single subscriber | Internal pipeline handoff                      |
 
-### Why SSE Routes Have No Circuit Breaker
+### <span style="color:hsl(285,68%,44%)">Why SSE Routes Have No Circuit Breaker</span>
 
 SSE routes (`/v1/movieInfoStream`, `/v1/reviewsStream`) are in YAML without circuit breakers deliberately. A circuit breaker on a streaming connection would be wrong: once a long-lived SSE connection is established, interrupting it mid-stream would break the client's event processing state. Circuit breakers are designed for short request-response cycles, not persistent streams.
 
@@ -826,11 +826,11 @@ SSE routes (`/v1/movieInfoStream`, `/v1/reviewsStream`) are in YAML without circ
 ---
 
 <a id="11-webclient--reactive-http"></a>
-## 11. 🧵 WebClient — Reactive HTTP
+## <span style="color:hsl(288,68%,44%)">11. 🧵 WebClient — Reactive HTTP</span>
 
 `WebClient` is the reactive replacement for `RestTemplate`. Every method in the fluent API returns a `Mono` or `Flux` — the HTTP call does not start until subscription.
 
-### Building a Request
+### <span style="color:hsl(291,68%,44%)">Building a Request</span>
 
 ```java
 webClient
@@ -854,11 +854,11 @@ webClient
     .log();
 ```
 
-### Why `onStatus` Instead of Catching Exceptions Downstream
+### <span style="color:hsl(294,68%,44%)">Why `onStatus` Instead of Catching Exceptions Downstream</span>
 
 `retrieve()` throws `WebClientResponseException` for 4xx/5xx by default. `onStatus` intercepts specific status ranges before the body is deserialized and maps them to domain-specific typed exceptions. Downstream code can then `filter` retries by exception type and provide specific error messages to callers.
 
-### Retry Logic
+### <span style="color:hsl(297,68%,44%)">Retry Logic</span>
 
 ```
 Call 1 fails (5xx) → wait 1s → Call 2 fails → wait 2s → Call 3 fails → wait 4s → Call 4 fails → throw
@@ -866,7 +866,7 @@ Call 1 fails (5xx) → wait 1s → Call 2 fails → wait 2s → Call 3 fails →
 
 Only `MoviesInfoServerException` (5xx) triggers retry. `MoviesInfoClientException` (4xx) does not retry because the client sent a bad request — retrying won't help.
 
-### Gateway-Level HTTP Client Configuration
+### <span style="color:hsl(300,68%,44%)">Gateway-Level HTTP Client Configuration</span>
 
 The gateway's Netty HTTP client is configured in `application.yml`:
 
@@ -885,9 +885,9 @@ To see wiretap logs: set `logging.level.reactor.netty: DEBUG` in `application.ym
 ---
 
 <a id="12-spring-cloud-gateway"></a>
-## 12. ☁️ Spring Cloud Gateway
+## <span style="color:hsl(303,68%,44%)">12. ☁️ Spring Cloud Gateway</span>
 
-### What the Gateway Does
+### <span style="color:hsl(306,68%,44%)">What the Gateway Does</span>
 
 Spring Cloud Gateway is a reactive API gateway built on WebFlux + Netty. Its responsibilities:
 
@@ -896,7 +896,7 @@ Spring Cloud Gateway is a reactive API gateway built on WebFlux + Netty. Its res
 3. **Protect** — circuit breakers, rate limiting, authentication at the edge
 4. **Observe** — correlation IDs, access logging, metrics
 
-### Route Matching
+### <span style="color:hsl(309,68%,44%)">Route Matching</span>
 
 A route is a triple: `(predicate, filters, target URI)`.
 
@@ -913,9 +913,9 @@ predicates:
   - Header=X-Version, \d+     # AND header X-Version is numeric
 ```
 
-### Two Route Definition Styles
+### <span style="color:hsl(312,68%,44%)">Two Route Definition Styles</span>
 
-#### Programmatic (`RouteLocatorBuilder`) — for REST API routes with circuit breakers
+#### <span style="color:hsl(315,68%,44%)">Programmatic (`RouteLocatorBuilder`) — for REST API routes with circuit breakers</span>
 
 ```java
 builder.routes()
@@ -935,7 +935,7 @@ builder.routes()
 
 Use when: circuit breakers needed; typed retry config; route URIs come from `@Value` beans; IDE refactoring support needed.
 
-#### Declarative YAML — for SSE stream routes with named filters
+#### <span style="color:hsl(317,68%,44%)">Declarative YAML — for SSE stream routes with named filters</span>
 
 ```yaml
 spring:
@@ -958,9 +958,9 @@ Use when: simple header manipulation; routes may change per environment without 
 
 Both sets of routes are merged at startup — Spring Cloud Gateway treats them as a single route list.
 
-### Filter Types
+### <span style="color:hsl(320,68%,44%)">Filter Types</span>
 
-#### GlobalFilter — `GlobalLoggingFilter`
+#### <span style="color:hsl(323,68%,44%)">GlobalFilter — `GlobalLoggingFilter`</span>
 
 Applied to **every** request. Runs at `HIGHEST_PRECEDENCE`. Responsibilities:
 
@@ -985,7 +985,7 @@ public class GlobalLoggingFilter implements GlobalFilter, Ordered {
 }
 ```
 
-#### Named GatewayFilterFactory — `PreFilterGatewayFilterFactory` / `PostFilterGatewayFilterFactory`
+#### <span style="color:hsl(326,68%,44%)">Named GatewayFilterFactory — `PreFilterGatewayFilterFactory` / `PostFilterGatewayFilterFactory`</span>
 
 Applied only to routes that list the filter by name. The naming convention is: class name minus `GatewayFilterFactory` suffix = the name used in YAML.
 
@@ -1013,7 +1013,7 @@ PostFilterGatewayFilterFactory →  name: PostFilter in YAML
 
 </ul>
 
-#### Built-in Shortcut Filters
+#### <span style="color:hsl(329,68%,44%)">Built-in Shortcut Filters</span>
 
 | Shortcut syntax                         | What it does                                                 |
 |-----------------------------------------|--------------------------------------------------------------|
@@ -1023,7 +1023,7 @@ PostFilterGatewayFilterFactory →  name: PostFilter in YAML
 | `StripPrefix=1`                         | Removes the first path segment before forwarding             |
 | `RewritePath=/old/(?<seg>.*), /$\{seg}` | Regex path rewrite                                           |
 
-#### `WebFilter` — `RequestIdWebFilter` and `JwtAuthenticationWebFilter`
+#### <span style="color:hsl(332,68%,44%)">`WebFilter` — `RequestIdWebFilter` and `JwtAuthenticationWebFilter`</span>
 
 Not every cross-cutting concern is expressed as a `GatewayFilterFactory`. `RequestIdWebFilter` and `JwtAuthenticationWebFilter` are plain Spring WebFlux `WebFilter` beans — they run in the standard WebFlux filter chain, *before* Spring Cloud Gateway's own `GatewayFilterChain` even starts, which is exactly why they are the right place to put identity and correlation concerns that every route (proxied or not) must share.
 
@@ -1055,7 +1055,7 @@ Two details worth calling out:
 
 `JwtAuthenticationWebFilter` validates the `Authorization: Bearer <token>` header for every path except `/actuator/**`, `/fallback/**`, and `/v1/public/**`. A missing/malformed header or an invalid/expired token short-circuits the chain with `401 Unauthorized` by calling `exchange.getResponse().setComplete()` directly — the request never reaches route matching, so it never counts toward a circuit breaker's failure rate. On success, the filter mutates the request to add `X-User-Id` (the JWT's subject claim) before calling `chain.filter(mutatedExchange)`, so every downstream filter and backend service can trust the caller's identity without re-parsing or re-validating the token.
 
-#### Redis-Backed Rate Limiting
+#### <span style="color:hsl(335,68%,44%)">Redis-Backed Rate Limiting</span>
 
 `RequestRateLimiter` is applied as a `default-filter` in `application.yml`, so it runs for every route without being repeated per-route:
 
@@ -1085,7 +1085,7 @@ public KeyResolver userKeyResolver() {
 }
 ```
 
-#### Canary / Weighted Routing
+#### <span style="color:hsl(338,68%,44%)">Canary / Weighted Routing</span>
 
 `application.yml` defines two routes over the same `Weight` group name (`movie-info-group`), splitting traffic to `/v1/movieInfo/**` between a stable and a canary backend:
 
@@ -1110,9 +1110,9 @@ The `Weight` predicate assigns each request a pseudo-random bucket at request ti
 ---
 
 <a id="13-resilience-patterns"></a>
-## 13. 🛡️ Resilience Patterns
+## <span style="color:hsl(341,68%,44%)">13. 🛡️ Resilience Patterns</span>
 
-### Circuit Breaker States
+### <span style="color:hsl(344,68%,44%)">Circuit Breaker States</span>
 
 ```mermaid
 stateDiagram-v2
@@ -1137,7 +1137,7 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
 ```
 
-### Time Limiter
+### <span style="color:hsl(347,68%,44%)">Time Limiter</span>
 
 Cancels the downstream call if it takes too long, counted as a failure by the circuit breaker:
 
@@ -1150,7 +1150,7 @@ resilience4j:
       moviesCB:     { timeoutDuration: 10s }  # higher: aggregates 2 calls
 ```
 
-### Fallback Controller
+### <span style="color:hsl(350,68%,44%)">Fallback Controller</span>
 
 When the circuit is open, the gateway forwards internally to `/fallback/{service}`. `FallbackController` handles these:
 
@@ -1166,7 +1166,7 @@ public Mono<ResponseEntity<String>> movieInfoFallback() {
 
 Callers receive a structured 503 instead of a connection error or timeout.
 
-### Bulkhead
+### <span style="color:hsl(353,68%,44%)">Bulkhead</span>
 
 `application.yml` also configures Resilience4j bulkheads, isolating each downstream dependency's concurrency so a spike in calls to one service cannot starve the others:
 
@@ -1186,9 +1186,9 @@ resilience4j:
 ---
 
 <a id="14-reactive-persistence--mongodb-and-r2dbcpostgresql"></a>
-## 14. 🗄️ Reactive Persistence — MongoDB and R2DBC/PostgreSQL
+## <span style="color:hsl(356,68%,44%)">14. 🗄️ Reactive Persistence — MongoDB and R2DBC/PostgreSQL</span>
 
-### Why Reactive MongoDB
+### <span style="color:hsl(358,68%,44%)">Why Reactive MongoDB</span>
 
 Spring Data MongoDB's standard `MongoRepository` uses the blocking MongoDB Java driver. Every `findAll()` call blocks a thread until documents return. Spring Data Reactive MongoDB uses the MongoDB Reactive Streams driver, returning `Mono<T>` and `Flux<T>` — fully non-blocking all the way to the MongoDB wire protocol.
 
@@ -1202,7 +1202,7 @@ Flux<MovieInfo> findByYear(Integer year);
 
 Spring Data generates the query implementation from the method name in both cases. The only change is the return type.
 
-### Java Records as `@Document`
+### <span style="color:hsl(1,68%,44%)">Java Records as `@Document`</span>
 
 Spring Data MongoDB 4.x (Spring Boot 3.x) supports Java records as document types natively:
 
@@ -1226,7 +1226,7 @@ doc.name()          // CORRECT
 doc.getMovieInfoId() // WRONG — records do not generate JavaBean getters
 ```
 
-### MongoDB Field Projections — a CQRS-Lite Read Model
+### <span style="color:hsl(4,68%,44%)">MongoDB Field Projections — a CQRS-Lite Read Model</span>
 
 The info service's `MovieInfoProjectionRepository` demonstrates returning a slim projection instead of the full document, using `@Query`'s `fields` attribute:
 
@@ -1237,7 +1237,7 @@ Flux<MovieSummary> findAllSummaries();
 
 Spring Data MongoDB restricts the fields fetched from the wire *and* automatically maps the reduced document shape onto `MovieSummary`, a separate three-field record. This is a lightweight version of the CQRS "separate read model" idea: list views that only need `movieInfoId`/`name`/`year` never pay the cost of deserializing `cast` and `releaseDate` off the wire.
 
-### Why R2DBC Instead of Blocking JDBC
+### <span style="color:hsl(7,68%,44%)">Why R2DBC Instead of Blocking JDBC</span>
 
 `spring-reactive-service-r2dbc` swaps MongoDB for PostgreSQL to show the same non-blocking principle applied to a relational database. R2DBC (**R**eactive **R**elational **D**ata**b**ase **C**onnectivity) is a separate driver-level SPI from JDBC — JDBC's `Connection`/`Statement`/`ResultSet` API is fundamentally blocking (`executeQuery()` blocks the calling thread until the database responds), so it cannot be wrapped to become non-blocking without defeating the purpose. R2DBC instead models a query result as a `Publisher<Row>`, so `r2dbc-postgresql` can deliver rows to a `Flux<Genre>` as they stream off the socket, without ever parking a thread.
 
@@ -1250,7 +1250,7 @@ public interface GenreRepository extends ReactiveCrudRepository<Genre, Long> {
 }
 ```
 
-### Reactive Transactions Without a ThreadLocal Connection
+### <span style="color:hsl(10,68%,44%)">Reactive Transactions Without a ThreadLocal Connection</span>
 
 Traditional Spring `@Transactional` works by binding the JDBC `Connection` to the current thread via `TransactionSynchronizationManager` (a `ThreadLocal`). That model breaks the instant a reactive pipeline hops schedulers — there is no guarantee the code that commits the transaction runs on the same thread that opened it. Spring's reactive transaction management solves this by threading the transaction state through the **Reactor `Context`** instead of a `ThreadLocal`, exposed to application code as `TransactionalOperator`:
 
@@ -1273,9 +1273,9 @@ Because the transaction context rides along in `Context` rather than a thread, `
 ---
 
 <a id="15-reactive-caching-with-redis"></a>
-## 15. ⚡ Reactive Caching with Redis
+## <span style="color:hsl(13,68%,44%)">15. ⚡ Reactive Caching with Redis</span>
 
-### Cache-Aside, Non-Blocking End to End
+### <span style="color:hsl(16,68%,44%)">Cache-Aside, Non-Blocking End to End</span>
 
 `spring-reactive-service-info` includes a `MovieInfoCacheService` that implements the classic **cache-aside** (lazy-loading) pattern, entirely with non-blocking operators via `ReactiveRedisTemplate`. It is a self-contained, independently testable component — as shipped, `MovieInfoController`/`MovieInfoServiceImpl` do not call it, so reads currently always go straight to MongoDB. Read the implementation as a template for *how* to front a reactive repository with Redis, not as evidence that the info service's live GET path is currently cached.
 
@@ -1310,7 +1310,7 @@ sequenceDiagram
 
 The whole path — cache read, DB fallback, cache write — is one composed `Mono` chain. `switchIfEmpty` is doing the cache-miss branching: `redisTemplate.opsForValue().get(key)` emits an empty `Mono` (not `null`) on a miss, and `switchIfEmpty` only subscribes to the `loader` publisher in that case, exactly mirroring `Optional`-style fallback logic but fully asynchronously.
 
-### Serialization Detail: Records and `LocalDate`
+### <span style="color:hsl(19,68%,44%)">Serialization Detail: Records and `LocalDate`</span>
 
 `ReactiveRedisConfig` configures a `Jackson2JsonRedisSerializer` with an explicit `JavaTimeModule` registered on the `ObjectMapper`:
 
@@ -1322,20 +1322,20 @@ ObjectMapper mapper = new ObjectMapper()
 
 Without `JavaTimeModule`, Jackson cannot serialize `MovieInfoDocument.releaseDate` (a `LocalDate`) and either throws or silently writes a numeric epoch array — disabling `WRITE_DATES_AS_TIMESTAMPS` keeps the cached JSON human-readable (`"2008-07-18"` instead of `[2008,7,18]`), which matters if the cache is ever inspected directly with `redis-cli`.
 
-### TTL and Eviction
+### <span style="color:hsl(22,68%,44%)">TTL and Eviction</span>
 
 Cached entries expire automatically after a 10-minute TTL (`Duration.ofMinutes(10)` passed to `set(key, doc, TTL)`), and `MovieInfoCacheService.evict(id)` allows explicit invalidation (e.g., after an update or delete) so stale data is never served past a write. `getAll()` is explicitly documented in the code as **demo-only** — it uses the Redis `KEYS` command to pattern-scan the keyspace, which is O(N) and blocks the single-threaded Redis server while it runs; production code should use `SCAN` (cursor-based, non-blocking on the server) instead.
 
 ---
 
 <a id="16-transactional-outbox-pattern"></a>
-## 16. 🧩 Transactional Outbox Pattern
+## <span style="color:hsl(25,68%,44%)">16. 🧩 Transactional Outbox Pattern</span>
 
-### The Dual-Write Problem
+### <span style="color:hsl(28,68%,44%)">The Dual-Write Problem</span>
 
 A service that needs to both persist a domain change *and* publish an event describing that change (to Kafka, RabbitMQ, or another consumer) faces the dual-write problem: if the database commit succeeds but the broker publish fails (or vice versa), the two systems disagree about what happened, and there is no distributed transaction spanning "MongoDB" and "message broker" to make both succeed or fail atomically.
 
-### How This Project's Outbox Works
+### <span style="color:hsl(31,68%,44%)">How This Project's Outbox Works</span>
 
 `spring-reactive-service-info` includes an `outbox` package that implements the transactional outbox pattern: instead of publishing directly to a broker, the service writes an `OutboxEvent` document to MongoDB — the *same* database, and ideally the same logical write, as the domain aggregate:
 
@@ -1373,20 +1373,20 @@ sequenceDiagram
     end
 ```
 
-### Why This Avoids the Dual-Write Problem
+### <span style="color:hsl(34,68%,44%)">Why This Avoids the Dual-Write Problem</span>
 
 Because the outbox row is written to the *same* database as the domain data (not a separate broker), a single database commit covers both — there is no window where the aggregate is saved but the event describing it is lost, or vice versa. The relay then has an **at-least-once** delivery guarantee to the broker: if the process crashes after publishing but before marking `SENT`, the event is simply republished on the next scheduled run. Consumers of the eventual real broker integration would need to be idempotent to tolerate that at-least-once semantic — a normal and expected trade-off of the outbox pattern, and cheaper to reason about than a lost event.
 
 ---
 
 <a id="17-reactive-websocket"></a>
-## 17. 🧵 Reactive WebSocket
+## <span style="color:hsl(36,68%,44%)">17. 🧵 Reactive WebSocket</span>
 
-### WebSocket vs. SSE
+### <span style="color:hsl(39,68%,44%)">WebSocket vs. SSE</span>
 
 Both SSE and WebSocket keep a connection open without occupying a thread per connection, but they solve different problems. SSE (used by the info and review services' `/stream` endpoints, [§10](#10-server-sent-events-and-sinks)) is server-to-client only, built on plain HTTP, and reconnects automatically in the browser's `EventSource` API. WebSocket is bidirectional and requires an explicit protocol upgrade — the right choice when clients need to *send* messages over the same long-lived connection, not just receive them.
 
-### `MovieInfoWebSocketHandler` — Broadcast Chat-Style Fan-Out
+### <span style="color:hsl(42,68%,32%)">`MovieInfoWebSocketHandler` — Broadcast Chat-Style Fan-Out</span>
 
 The info service implements `WebSocketHandler` directly (not through STOMP or `@MessageMapping`) to keep the reactive plumbing visible:
 
@@ -1430,9 +1430,9 @@ Every connected session shares one `messageSink`. When any client sends a messag
 ---
 
 <a id="18-validation-and-error-handling"></a>
-## 18. ⚠️ Validation and Error Handling
+## <span style="color:hsl(45,68%,32%)">18. ⚠️ Validation and Error Handling</span>
 
-### Bean Validation (`@RestController` style)
+### <span style="color:hsl(48,68%,32%)">Bean Validation (`@RestController` style)</span>
 
 The info service uses standard JSR-380 annotations on record fields and `@Valid` on the controller parameter:
 
@@ -1454,7 +1454,7 @@ public ResponseEntity<String> handleRequestBodyError(WebExchangeBindException ex
 }
 ```
 
-### Manual Validation (Functional Router style)
+### <span style="color:hsl(51,68%,32%)">Manual Validation (Functional Router style)</span>
 
 The review service cannot use `@Valid` on `bodyToMono()` — it is not triggered automatically in functional routing. A `ReviewValidator` component is called via `.doOnNext()`:
 
@@ -1462,7 +1462,7 @@ The review service cannot use `@Valid` on `bodyToMono()` — it is not triggered
 .doOnNext(reviewValidator::validate)  // throws ReviewDataException if invalid
 ```
 
-### Error Propagation in Reactive Pipelines
+### <span style="color:hsl(54,68%,32%)">Error Propagation in Reactive Pipelines</span>
 
 Errors in reactive pipelines propagate as signals, not exceptions. When any operator throws or calls `Mono.error(...)`, the error signal travels downstream through the pipeline, skipping all `onNext` handlers, until it reaches an `onError` handler or the subscriber's error terminal.
 
@@ -1477,9 +1477,9 @@ repository.findById(id)
 ---
 
 <a id="19-testing-strategy"></a>
-## 19. 🧪 Testing Strategy
+## <span style="color:hsl(57,68%,32%)">19. 🧪 Testing Strategy</span>
 
-### Layer 1: Unit Tests — Pure Reactor (`StepVerifier`)
+### <span style="color:hsl(60,68%,32%)">Layer 1: Unit Tests — Pure Reactor (`StepVerifier`)</span>
 
 ```java
 @Test
@@ -1493,7 +1493,7 @@ void testFluxConcatMap() {
 
 `StepVerifier` is the reactive assertion DSL. It subscribes to the publisher and verifies: items in order, error type, completion signal. `withVirtualTime` simulates time for `delayElements` without actual sleeping.
 
-### Layer 2: Controller Unit Tests (`@WebFluxTest`)
+### <span style="color:hsl(63,68%,32%)">Layer 2: Controller Unit Tests (`@WebFluxTest`)</span>
 
 ```java
 @WebFluxTest(MovieInfoController.class)
@@ -1516,7 +1516,7 @@ class MovieInfoControllerTest {
 
 `@WebFluxTest` loads only the WebFlux slice — no database, no full Spring context. `MovieInfoService` is mocked. Tests verify HTTP contract: status codes, response bodies, content types, headers.
 
-### Layer 3: Integration Tests (`@SpringBootTest` + Testcontainers)
+### <span style="color:hsl(66,68%,32%)">Layer 3: Integration Tests (`@SpringBootTest` + Testcontainers)</span>
 
 ```java
 @SpringBootTest(webEnvironment = RANDOM_PORT)
@@ -1548,7 +1548,7 @@ class MovieInfoControllerInt {
 
 </ul>
 
-### Layer 4: WireMock Contract Tests (movies service)
+### <span style="color:hsl(69,68%,32%)">Layer 4: WireMock Contract Tests (movies service)</span>
 
 The movies service depends on two downstream services. WireMock stubs those HTTP endpoints:
 
@@ -1567,15 +1567,15 @@ This tests the WebClient error handling, retry logic, and aggregation without ne
 ---
 
 <a id="20-api-reference"></a>
-## 20. 📚 API Reference
+## <span style="color:hsl(72,68%,32%)">20. 📚 API Reference</span>
 
-### Gateway Entry Point: `http://localhost:8765`
+### <span style="color:hsl(75,68%,32%)">Gateway Entry Point: `http://localhost:8765`</span>
 
 All requests go through the gateway. The gateway adds `X-Correlation-Id` to every request and response.
 
 ---
 
-### Movie Info Service (via Gateway)
+### <span style="color:hsl(77,68%,32%)">Movie Info Service (via Gateway)</span>
 
 | Method | Path                         | Description                                                                     | Body                       | Response                                                   |
 |--------|------------------------------|---------------------------------------------------------------------------------|----------------------------|------------------------------------------------------------|
@@ -1607,7 +1607,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ---
 
-### Review Service (via Gateway)
+### <span style="color:hsl(80,68%,32%)">Review Service (via Gateway)</span>
 
 | Method | Path                          | Description               | Body                  | Response               |
 |--------|-------------------------------|---------------------------|-----------------------|------------------------|
@@ -1631,7 +1631,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ---
 
-### Movies Aggregation Service (via Gateway)
+### <span style="color:hsl(83,68%,32%)">Movies Aggregation Service (via Gateway)</span>
 
 | Method | Path                   | Description                    | Response                  |
 |--------|------------------------|--------------------------------|---------------------------|
@@ -1648,7 +1648,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ---
 
-### Genre Service (R2DBC / PostgreSQL) — direct, port 8083
+### <span style="color:hsl(86,68%,32%)">Genre Service (R2DBC / PostgreSQL) — direct, port 8083</span>
 
 `GatewayRoutesConfig` does not currently define a route for the r2dbc service, so it is called directly rather than through the gateway at `http://localhost:8765`:
 
@@ -1675,7 +1675,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ---
 
-### Gateway Actuator Endpoints
+### <span style="color:hsl(89,68%,32%)">Gateway Actuator Endpoints</span>
 
 | Path                           | Description                                        |
 |--------------------------------|----------------------------------------------------|
@@ -1687,9 +1687,9 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 ---
 
 <a id="21-running-the-project"></a>
-## 21. 🚀 Running the Project
+## <span style="color:hsl(92,68%,32%)">21. 🚀 Running the Project</span>
 
-### Prerequisites
+### <span style="color:hsl(95,68%,32%)">Prerequisites</span>
 
 <ul>
 
@@ -1699,7 +1699,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 </ul>
 
-### Start Infrastructure with Docker Compose
+### <span style="color:hsl(98,68%,32%)">Start Infrastructure with Docker Compose</span>
 
 The root `docker-compose.yml` provisions all three datastores the services depend on — MongoDB (info + review), Redis (info service cache + gateway rate limiter), and PostgreSQL (r2dbc service) — each with a healthcheck:
 
@@ -1714,13 +1714,13 @@ export DOCKER_HOST="unix://${HOME}/.docker/run/docker.sock"
 ```
 (This is already wired into the root `pom.xml`'s Surefire `<environmentVariables>` for `mvn test`, but is needed if you run tests from an IDE.)
 
-### Build Everything
+### <span style="color:hsl(101,68%,32%)">Build Everything</span>
 
 ```bash
 mvn clean install
 ```
 
-### Start Services (in order)
+### <span style="color:hsl(104,68%,32%)">Start Services (in order)</span>
 
 ```bash
 # Terminal 1 — Info Service (port 8080) — MongoDB + Redis + WebSocket
@@ -1739,13 +1739,13 @@ cd spring-reactive-service-r2dbc && mvn spring-boot:run
 cd spring-reactive-gateway && mvn spring-boot:run
 ```
 
-### Run All Tests
+### <span style="color:hsl(107,68%,32%)">Run All Tests</span>
 
 ```bash
 mvn clean test
 ```
 
-### Authenticating Through the Gateway
+### <span style="color:hsl(110,68%,32%)">Authenticating Through the Gateway</span>
 
 `JwtAuthenticationWebFilter` ([§12](#12-spring-cloud-gateway)) protects every gateway path except `/actuator/**`, `/fallback/**`, and `/v1/public/**` — any other request needs a valid `Authorization: Bearer <jwt>` header, or the gateway returns `401 Unauthorized` before the request ever reaches route matching. This codebase does not ship a `/login` endpoint that issues tokens (the gateway is a learning project focused on validation, not a full auth server), so for manual testing mint a token yourself with `TokenUtil`, using the same dev secret configured in `spring-reactive-gateway/src/main/resources/application.yml` (`security.jwt.secret`):
 
@@ -1765,7 +1765,7 @@ export TOKEN="<paste the token printed above>"
 
 Alternatively, skip the gateway entirely and call a service on its own port directly (e.g. `curl http://localhost:8080/v1/movieInfo/stream`) — none of the backend services validate JWTs themselves; only the gateway does.
 
-### Try the SSE Stream End-to-End
+### <span style="color:hsl(113,68%,32%)">Try the SSE Stream End-to-End</span>
 
 ```bash
 # Terminal A — subscribe to SSE stream through the gateway (requires the Bearer token above)
@@ -1778,7 +1778,7 @@ curl -s -X POST http://localhost:8765/v1/movieInfo \
   -d '{"name":"Inception","year":2010,"cast":["DiCaprio"],"releaseDate":"2010-07-16"}'
 ```
 
-### Try the Circuit Breaker
+### <span style="color:hsl(116,68%,32%)">Try the Circuit Breaker</span>
 
 ```bash
 # Start ONLY the gateway — do NOT start info/review/movies services
@@ -1795,7 +1795,7 @@ curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8765/v1/movieInfo/abc
 # HTTP/1.1 503 (immediate — no retry delay)
 ```
 
-### Try the R2DBC Genre Service
+### <span style="color:hsl(118,68%,32%)">Try the R2DBC Genre Service</span>
 
 ```bash
 # Called directly — no gateway route is defined for this service yet
@@ -1813,9 +1813,9 @@ curl -s -X POST http://localhost:8083/v1/genres/batch \
 ---
 
 <a id="22-pros-and-cons-of-reactive-programming"></a>
-## 22. 🧵 Pros and Cons of Reactive Programming
+## <span style="color:hsl(121,68%,32%)">22. 🧵 Pros and Cons of Reactive Programming</span>
 
-### Advantages
+### <span style="color:hsl(124,68%,32%)">Advantages</span>
 
 **1. High concurrency with minimal resources**
 
@@ -1845,7 +1845,7 @@ Long-lived connections (SSE, WebSocket) hold no thread on the server. Thousands 
 
 Calling three services in parallel and combining results is idiomatic with `Mono.zip`. In imperative code, this requires explicit `CompletableFuture` management, which is error-prone.
 
-### Disadvantages
+### <span style="color:hsl(127,68%,32%)">Disadvantages</span>
 
 **1. Steep learning curve**
 
@@ -1885,7 +1885,7 @@ Every I/O layer (database driver, HTTP client, messaging client) must have react
 
 Thread-local values (MDC logging context, Spring Security `SecurityContextHolder`, distributed tracing spans) do not propagate across reactive scheduler switches automatically. Reactor's `Context` / `contextWrite` must be used explicitly, which adds unfamiliar boilerplate.
 
-### Summary Verdict
+### <span style="color:hsl(130,68%,32%)">Summary Verdict</span>
 
 | Use reactive? | Scenario                                                                                                                                                     |
 |---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -1896,7 +1896,7 @@ Thread-local values (MDC logging context, Spring Security `SecurityContextHolder
 ---
 
 <a id="23-key-learning-takeaways"></a>
-## 23. 🔹 Key Learning Takeaways
+## <span style="color:hsl(133,68%,32%)">23. 🔹 Key Learning Takeaways</span>
 
 This project was built to cement specific reactive concepts through working code. The table below maps each concept to exactly where it lives in the codebase:
 

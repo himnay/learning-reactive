@@ -1,10 +1,10 @@
 ![image](https://user-images.githubusercontent.com/12750409/154622723-c1285869-c49a-4a49-919a-e86b1b837cd8.png)
 
-# reactive-spring-webflux
+# <span style="color:hsl(105,68%,32%)">reactive-spring-webflux</span>
 
 Spring Webflux
 
-#### Install Mongo DB in MAC
+#### <span style="color:hsl(225,68%,44%)">Install Mongo DB in MAC</span>
 
 - Run the below command to install the **MongoDB**.
 
@@ -22,7 +22,7 @@ brew install mongodb-community
 brew services restart mongodb-community
 ```
 
-#### Install Mongo DB in Windows
+#### <span style="color:hsl(345,68%,44%)">Install Mongo DB in Windows</span>
 
 - Follow the steps in the below link to install Mongo db in Windows.
 

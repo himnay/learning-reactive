@@ -1,4 +1,4 @@
-# spring-reactive-service-movies
+# <span style="color:hsl(177,68%,36%)">spring-reactive-service-movies</span>
 
 A pure **aggregation** service — it owns no database. Its only job is to make two non-blocking HTTP calls to two other services (`spring-reactive-service-info` and `spring-reactive-service-review`) and combine their responses into a single `Movie` object. It exists in this repo specifically to demonstrate **WebClient**-based reactive fan-out: how to compose two independent, non-blocking network calls without ever parking a thread while waiting for either one.
 
@@ -12,7 +12,7 @@ This document assumes you've read the root [`README.md`](../README.md) for the g
 
 ---
 
-## Table of Contents
+## <span style="color:hsl(201,68%,44%)">Table of Contents</span>
 
 1. [Why This Module Has No Database](#1-why-this-module-has-no-database)
 2. [Architecture](#2-architecture)
@@ -29,11 +29,11 @@ This document assumes you've read the root [`README.md`](../README.md) for the g
 
 ---
 
-## 1. Why This Module Has No Database
+## <span style="color:hsl(225,68%,44%)">1. Why This Module Has No Database</span>
 
 Every other Spring service in this repo (info, review, r2dbc) owns a datastore. This one deliberately does not — it is a **composition layer**. In a real system this pattern shows up as a BFF (Backend-For-Frontend) or an aggregation microservice: it doesn't duplicate data, it fetches from the services that own it and assembles a response shaped for a specific client need (here: "give me a movie with all of its reviews in one call"). Because it holds no state of its own, this is also the simplest module in the repo to reason about — everything it does is either an inbound HTTP request or an outbound `WebClient` call.
 
-## 2. Architecture
+## <span style="color:hsl(249,68%,44%)">2. Architecture</span>
 
 ```mermaid
 flowchart LR
@@ -60,7 +60,7 @@ flowchart LR
 
 This mirrors the **interface-first API** pattern used by the info service ([root README §6, Module 2](../README.md#module-2-spring-reactive-service-info)): `MoviesApi` owns the `@RequestMapping`/`@GetMapping` annotations and return types (`Mono<ResponseEntity<Movie>>`, `Flux<MovieInfo>`), and `MoviesController` is a plain implementation class. This keeps the controller trivially unit-testable — you can construct it with mock clients and call its methods directly with no web context needed.
 
-## 3. The Aggregation Pipeline
+## <span style="color:hsl(273,68%,44%)">3. The Aggregation Pipeline</span>
 
 `MoviesController.retrieveMovieById` is the whole service in one method:
 
@@ -86,7 +86,7 @@ Three operators do all the work:
 - **`collectList()`** turns the `Flux<Review>` into a `Mono<List<Review>>` so it can be combined into a single `Movie` record — a `Movie` holds a materialized list of reviews, not a lazy stream.
 - **`switchIfEmpty`** provides the 404 branch: if `retrieveMovieInfo` completes without emitting (movie not found upstream — see [§5](#5-webclient-error-handling-and-typed-exceptions) for how a 404 from the info service becomes an *empty* `Mono` rather than an error here), the fallback publisher runs instead, returning a `404` with an `X-Reason` header explaining why.
 
-## 4. Sequential vs. Parallel Fan-Out
+## <span style="color:hsl(297,68%,44%)">4. Sequential vs. Parallel Fan-Out</span>
 
 The pipeline above is **sequential fan-out**: `reviewRestClient.retrieveReviews(...)` is only invoked *after* `movieInfoRestClient.retrieveMovieInfo(...)` completes, because it lives inside the `flatMap`'s lambda. The two HTTP calls do not overlap in time.
 
@@ -132,7 +132,7 @@ sequenceDiagram
 
 `Mono.zip` subscribes to both source publishers immediately and only emits once *both* have completed, pairing their results into a `Tuple2`. The trade-off: `zip` propagates the *first* error from either source immediately (cancelling the other in-flight call), whereas the sequential version never even attempts the reviews call if movie info fails — a reasonable choice either way depending on whether you'd rather fail fast or fail minimally.
 
-## 5. WebClient Error Handling and Typed Exceptions
+## <span style="color:hsl(321,68%,44%)">5. WebClient Error Handling and Typed Exceptions</span>
 
 Both `MovieInfoRestClient` and `ReviewRestClient` use `.onStatus(...)` to intercept HTTP error responses *before* the body is deserialized, mapping them to typed, module-specific exceptions:
 
@@ -176,7 +176,7 @@ Four exception types, one per client × failure class:
 
 — which reflects a real domain decision: "this movie has no reviews yet" is not a failure, whereas "this movie doesn't exist" (from the info service) is. The same HTTP status code (`404`) is handled two different ways by two different clients in the same request, purely because what it *means* differs per upstream service.
 
-## 6. Retry with Exponential Backoff
+## <span style="color:hsl(345,68%,44%)">6. Retry with Exponential Backoff</span>
 
 Only `MovieInfoRestClient.retrieveMovieInfo` retries, and only on `MoviesInfoServerException` (5xx):
 
@@ -194,7 +194,7 @@ Call 1 fails (5xx) → wait ~1s → Call 2 fails → wait ~2s → Call 3 fails �
 
 `ReviewRestClient` has no `retryWhen` at all — a design choice consistent with the "missing reviews are not fatal" philosophy from [§5](#5-webclient-error-handling-and-typed-exceptions): retrying an optional, best-effort call adds latency without a correspondingly strong justification.
 
-## 7. The SSE Proxy Endpoint
+## <span style="color:hsl(9,68%,44%)">7. The SSE Proxy Endpoint</span>
 
 `GET /v1/movies/stream` re-publishes the info service's live movie-info stream, proxied through this module:
 
@@ -220,7 +220,7 @@ Two details worth understanding:
 - **Format translation.** The info service's own `/v1/movieInfo/stream` emits real `text/event-stream` SSE frames (`ServerSentEvent<MovieInfoDocument>` — see the root README's [§10](../README.md#10-server-sent-events-and-sinks)). `WebClient.bodyToFlux(MovieInfo.class)` (target type is the plain DTO, not `ServerSentEvent<T>`) decodes just the `data:` payload of each frame into a `MovieInfo`. This module's own endpoint then re-encodes that `Flux<MovieInfo>` as `application/x-ndjson` (newline-delimited JSON) rather than SSE — so a client of *this* module sees a different wire format than a client hitting the info service directly.
 - **`.repeat()`** resubscribes to the upstream `WebClient` call if it ever completes, so a transient upstream disconnect doesn't permanently end this module's own stream. There is no backoff on `.repeat()` here, unlike the retry policy on `retrieveMovieInfo` — a rapid disconnect/reconnect loop against a downed info service would resubscribe immediately and repeatedly.
 
-## 8. A Real Gotcha: `release_date` vs `releaseDate`
+## <span style="color:hsl(33,68%,44%)">8. A Real Gotcha: `release_date` vs `releaseDate`</span>
 
 `MovieInfo` (this module's own view of a movie, populated by deserializing the info service's JSON response) is declared as:
 
@@ -238,7 +238,7 @@ public record MovieInfo(
 
 This is a genuine inconsistency between how the two services model the same field, not a documentation error — it is worth knowing if you extend this module and wonder why a movie's release date always comes back `null` in the aggregated `Movie` response. The fix, if you want one, is either to drop `@JsonProperty("release_date")` from this module's `MovieInfo` record (matching the info service's actual camelCase output) or to add a matching `@JsonProperty` to `MovieInfoDocument` — but as shipped, neither side has been changed to match the other.
 
-## 9. Endpoints
+## <span style="color:hsl(57,68%,32%)">9. Endpoints</span>
 
 | Method | Path                   | Description                                               | Response                                               |
 |--------|------------------------|-----------------------------------------------------------|--------------------------------------------------------|
@@ -256,7 +256,7 @@ This is a genuine inconsistency between how the two services model the same fiel
 ```
 (`releaseDate` is shown as `null` here deliberately — see [§8](#8-a-real-gotcha-release_date-vs-releasedate).)
 
-### Example — calling the services directly (bypassing the gateway)
+### <span style="color:hsl(81,68%,32%)">Example — calling the services directly (bypassing the gateway)</span>
 
 ```bash
 # Prerequisite: start the info service (8080) and review service (8081) first,
@@ -281,7 +281,7 @@ curl -N -H "Accept: application/x-ndjson" http://localhost:8082/v1/movies/stream
 
 Note that going through the gateway (`http://localhost:8765`) instead of these direct ports additionally requires a `Bearer` JWT — see the root README's [§21 Running the Project](../README.md#21-running-the-project) for how to mint one for local testing.
 
-## 10. Testing with WireMock
+## <span style="color:hsl(105,68%,32%)">10. Testing with WireMock</span>
 
 `MoviesControllerWireMockInt` (in `src/test/java/intg`) verifies the whole aggregation pipeline — including WebClient error handling and retry — without running either real downstream service:
 
@@ -300,7 +300,7 @@ class MoviesControllerWireMockInt {
 mvn test
 ```
 
-## 11. Observability
+## <span style="color:hsl(129,68%,32%)">11. Observability</span>
 
 - **Prometheus**: `GET /actuator/prometheus` (Micrometer + `micrometer-registry-prometheus`)
 - **Prometheus scrape config**: `src/main/resources/prometheus/prometheus.yml`
@@ -311,7 +311,7 @@ docker run -d -p 9090:9090 \
   prom/prometheus
 ```
 
-## 12. Running This Module
+## <span style="color:hsl(153,68%,36%)">12. Running This Module</span>
 
 ```bash
 # From this directory
