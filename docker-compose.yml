@@ -1,7 +1,7 @@
 
 services:
   mongodb:
-    image: mongo:7
+    image: mongo:8.0
     container_name: mongodb
     ports:
       - "27017:27017"
@@ -21,7 +21,7 @@ services:
       start_period: 20s
 
   redis:
-    image: redis:7
+    image: redis:8
     container_name: redis
     ports:
       - "6379:6379"
@@ -37,7 +37,7 @@ services:
       start_period: 10s
 
   postgres:
-    image: postgres:19beta1
+    image: postgres:19beta3
     container_name: postgres
     ports:
       - "5432:5432"

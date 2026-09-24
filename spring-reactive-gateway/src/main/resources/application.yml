@@ -79,7 +79,7 @@ services:
 
 security:
   jwt:
-    secret: default-learning-secret-key-min-256-bits-padding1
+    secret: ${JWT_SECRET:default-learning-secret-key-min-256-bits-padding1}  # dev-only default — set JWT_SECRET anywhere real
 
 management:
   endpoints:

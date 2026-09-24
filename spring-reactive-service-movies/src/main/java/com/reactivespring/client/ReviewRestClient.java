@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -46,7 +47,9 @@ public class ReviewRestClient {
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {
                     log.warn("4xx from ReviewService [movieId={}]: {}", movieId, response.statusCode());
                     if (response.statusCode().equals(HttpStatus.NOT_FOUND)) {
-                        return Mono.empty();
+                        // Mono.empty() here would mean "not an error" and WebClient would then try to
+                        // decode the plain-text 404 body as Review (500). Signal it, resume below.
+                        return response.createException();
                     }
                     return response.bodyToMono(String.class)
                             .flatMap(msg -> Mono.error(new ReviewsClientException(msg)));
@@ -56,6 +59,8 @@ public class ReviewRestClient {
                                 .flatMap(msg -> Mono.error(new ReviewsServerException(
                                         "Server error in ReviewService: " + msg))))
                 .bodyToFlux(Review.class)
+                // no reviews yet is a normal state for the aggregate, not a failure
+                .onErrorResume(WebClientResponseException.NotFound.class, ex -> Flux.empty())
                 // Retry up to 3 times on server errors with exponential backoff
                 .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
                         .filter(ex -> ex instanceof ReviewsServerException)

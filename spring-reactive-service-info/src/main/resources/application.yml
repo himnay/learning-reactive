@@ -16,9 +16,9 @@ spring:
     activate:
       on-profile: local
   mongodb:
-    host: localhost
-    port: 27017
-    database: local
+    # Matches docker-compose (root user admin/admin, DB learning_reactive). Never use "local":
+    # that is MongoDB's internal replication database. Tests override this via @ServiceConnection.
+    uri: ${MONGODB_URI:mongodb://admin:admin@localhost:27017/learning_reactive?authSource=admin}
 management:
   endpoints:
     web:

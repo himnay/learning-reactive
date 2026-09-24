@@ -109,4 +109,33 @@ class MoviesControllerWireMockInt {
                 .exchange()
                 .expectStatus().isNotFound();
     }
+
+    @Test
+    @DisplayName("GET /v1/movies/{id} — a movie without reviews returns an empty review list, not 500")
+    void retrieveMovieById_reviewService404_returnsMovieWithNoReviews() {
+        var movieId = "abc";
+
+        stubFor(get(urlEqualTo("/v1/movieInfo/" + movieId))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(MOVIE_INFO_JSON)));
+
+        // exactly what the real review service answers: 404 with a plain-text body
+        stubFor(get(urlPathEqualTo("/v1/reviews"))
+                .willReturn(aResponse()
+                        .withStatus(404)
+                        .withBody("Review not found for movie " + movieId)));
+
+        webTestClient.get()
+                .uri("/v1/movies/{id}", movieId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Movie.class)
+                .consumeWith(result -> {
+                    var movie = result.getResponseBody();
+                    assertThat(movie).isNotNull();
+                    assertThat(movie.movieInfo().releaseDate()).hasToString("2005-06-15");
+                    assertThat(movie.reviewList()).isEmpty();
+                });
+    }
 }

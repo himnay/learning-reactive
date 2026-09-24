@@ -583,21 +583,21 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 | Technology                   | Version                      | Role                                                                                                                 |
 |------------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------|
 | Java                         | 25                           | Runtime — records, sealed types, pattern matching                                                                    |
-| Spring Boot                  | 4.1.0                        | Auto-configuration, embedded Netty, Actuator (pinned in root `pom.xml`, overriding the corporate `super-pom` parent) |
-| Spring Framework / WebFlux   | 7.0.8 (via Boot 4.1.0)       | Reactive web framework on Project Reactor                                                                            |
-| Project Reactor              | 3.8.6 (via Boot)             | Mono, Flux, Sinks, Schedulers                                                                                        |
-| Spring Cloud                 | 2025.1.2                     | BOM for `spring-cloud-starter-gateway-server-webflux` and `spring-cloud-starter-circuitbreaker-reactor-resilience4j` |
+| Spring Boot                  | 4.1.1                        | Auto-configuration, embedded Netty, Actuator (from the `super-pom` 1.1.2 parent, as of 2026)                         |
+| Spring Framework / WebFlux   | 7.0.9 (via Boot 4.1.1)       | Reactive web framework on Project Reactor                                                                            |
+| Project Reactor              | 3.8.7 (via Boot)             | Mono, Flux, Sinks, Schedulers                                                                                        |
+| Spring Cloud                 | 2025.1.3 (via learning-bom)  | BOM for `spring-cloud-starter-gateway-server-webflux` (5.0.3) and `spring-cloud-starter-circuitbreaker-reactor-resilience4j` |
 | Spring Data Reactive MongoDB | via Boot                     | Non-blocking MongoDB driver (info + review services)                                                                 |
 | Spring Data R2DBC            | via Boot                     | Non-blocking relational driver (r2dbc service)                                                                       |
-| `r2dbc-postgresql`           | 1.0.7.RELEASE                | Reactive PostgreSQL wire-protocol driver                                                                             |
-| MongoDB                      | 7 (Docker / Testcontainers)  | Document database for info and review services                                                                       |
-| PostgreSQL                   | 16 (Docker / Testcontainers) | Relational database for the r2dbc service                                                                            |
-| Redis                        | 7 (Docker)                   | Reactive cache-aside store (info service) + Gateway `RequestRateLimiter` token bucket                                |
-| `jjwt` (api/impl/jackson)    | 0.12.6                       | JWT issuing/validation for the gateway's `JwtAuthenticationWebFilter`                                                |
-| Resilience4j                 | via Boot                     | Circuit breaker, time limiter, bulkhead (gateway)                                                                    |
+| `r2dbc-postgresql`           | via Boot                     | Reactive PostgreSQL wire-protocol driver                                                                             |
+| MongoDB                      | 8.0 (Docker / Testcontainers); driver 5.8 | Document database for info and review services                                                          |
+| PostgreSQL                   | 19beta3 (Docker) / 18 (Testcontainers) | Relational database for the r2dbc service                                                                  |
+| Redis                        | 8 (Docker)                   | Reactive cache-aside store (info service) + Gateway `RequestRateLimiter` token bucket                                |
+| `jjwt` (api/impl/jackson)    | 0.13.0                       | JWT issuing/validation for the gateway's `JwtAuthenticationWebFilter`                                                |
+| Resilience4j                 | 2.3.0 (via Spring Cloud)     | Circuit breaker, time limiter, bulkhead (gateway)                                                                    |
 | Micrometer + Prometheus      | via Boot                     | Metrics collection and scraping                                                                                      |
-| WireMock                     | via spring-cloud-contract    | HTTP stub server for movies service integration tests                                                                |
-| Testcontainers               | 1.20.4                       | Real MongoDB / PostgreSQL in integration tests via Docker                                                            |
+| WireMock                     | 3.x `org.wiremock:wiremock-standalone` (via Spring Cloud) | HTTP stub server for movies service integration tests                                  |
+| Testcontainers               | 2.0.5 (via learning-bom)     | Real MongoDB / PostgreSQL in integration tests via Docker                                                            |
 | AssertJ                      | via Boot                     | Fluent assertions in tests                                                                                           |
 | StepVerifier                 | via reactor-test             | Reactive stream assertion DSL                                                                                        |
 | Maven                        | 3.9.x                        | Multi-module build                                                                                                   |
@@ -1204,7 +1204,7 @@ Spring Data generates the query implementation from the method name in both case
 
 ### <span style="color:hsl(284,80%,58%)">Java Records as `@Document`</span>
 
-Spring Data MongoDB 4.x (Spring Boot 3.x) supports Java records as document types natively:
+Spring Data MongoDB (5.x on Boot 4; 4.x already on Boot 3) supports Java records as document types natively:
 
 ```java
 @Document
@@ -1525,7 +1525,7 @@ class MovieInfoControllerInt {
 
     @Container
     @ServiceConnection  // auto-configures spring.data.mongodb.uri
-    static MongoDBContainer mongo = new MongoDBContainer("mongo:7");
+    static MongoDBContainer mongo = new MongoDBContainer("mongo:8.0");
 
     @Autowired WebTestClient webTestClient;
 
@@ -1750,7 +1750,7 @@ mvn clean test
 `JwtAuthenticationWebFilter` ([§12](#12-spring-cloud-gateway)) protects every gateway path except `/actuator/**`, `/fallback/**`, and `/v1/public/**` — any other request needs a valid `Authorization: Bearer <jwt>` header, or the gateway returns `401 Unauthorized` before the request ever reaches route matching. This codebase does not ship a `/login` endpoint that issues tokens (the gateway is a learning project focused on validation, not a full auth server), so for manual testing mint a token yourself with `TokenUtil`, using the same dev secret configured in `spring-reactive-gateway/src/main/resources/application.yml` (`security.jwt.secret`):
 
 ```bash
-jshell --class-path "spring-reactive-gateway/target/classes:$(find ~/.m2 -name 'jjwt-*-0.12.6.jar' -o -name 'jackson-databind-*.jar' | tr '\n' ':')"
+jshell --class-path "spring-reactive-gateway/target/classes:$(find ~/.m2 -name 'jjwt-*-0.13.0.jar' -o -name 'jackson-databind-*.jar' | tr '\n' ':')"
 ```
 ```java
 jshell> import com.reactivespring.gateway.filter.TokenUtil;

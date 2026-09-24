@@ -1,1 +1,0 @@
-movies-review-service uses RouterFunction + Handler for REST APIs

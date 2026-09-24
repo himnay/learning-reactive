@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.org.llm</groupId>
         <artifactId>super-pom</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.2</version>
         <relativePath/>
     </parent>
 
@@ -30,29 +30,12 @@
     <properties>
         <java.version>25</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
-        <spring-boot.version>4.1.0</spring-boot.version>
-        <spring-cloud.version>2025.1.2</spring-cloud.version>
-        <testcontainers.version>1.20.4</testcontainers.version>
-        <jjwt.version>0.12.6</jjwt.version>
+        <jjwt.version>0.13.0</jjwt.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>${testcontainers.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
+            <!-- Spring Cloud and Testcontainers (2.x) come from learning-bom via super-pom -->
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
                 <artifactId>jjwt-api</artifactId>
@@ -79,7 +62,6 @@
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
-                    <version>${spring-boot.version}</version>
                     <executions>
                         <execution>
                             <id>repackage</id>
@@ -126,12 +108,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-Dnet.bytebuddy.experimental=true -Dapi.version=1.41</argLine>
-                    <environmentVariables>
-                        <DOCKER_HOST>unix://${user.home}/.docker/run/docker.sock</DOCKER_HOST>
-                        <TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>${user.home}/.docker/run/docker.sock</TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>
-                        <DOCKER_API_VERSION>1.41</DOCKER_API_VERSION>
-                    </environmentVariables>
                     <includes>
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
