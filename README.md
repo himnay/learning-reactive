@@ -583,7 +583,7 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 | Technology                   | Version                      | Role                                                                                                                 |
 |------------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------|
 | Java                         | 25                           | Runtime — records, sealed types, pattern matching                                                                    |
-| Spring Boot                  | 4.1.1                        | Auto-configuration, embedded Netty, Actuator (from the `super-pom` 1.1.2 parent, as of 2026)                         |
+| Spring Boot                  | 4.1.1                        | Auto-configuration, embedded Netty, Actuator (from the `super-pom` 1.1.3 parent, as of 2026)                         |
 | Spring Framework / WebFlux   | 7.0.9 (via Boot 4.1.1)       | Reactive web framework on Project Reactor                                                                            |
 | Project Reactor              | 3.8.7 (via Boot)             | Mono, Flux, Sinks, Schedulers                                                                                        |
 | Spring Cloud                 | 2025.1.3 (via learning-bom)  | BOM for `spring-cloud-starter-gateway-server-webflux` (5.0.3) and `spring-cloud-starter-circuitbreaker-reactor-resilience4j` |
