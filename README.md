@@ -1,6 +1,6 @@
 # <span style="color:hsl(136,80%,58%)">Learning Reactive — Spring WebFlux & Project Reactor</span>
 
-<img src="image/reactor-logo.png" alt="Project Reactor" width="90"/>
+<img src="image/reactor-logo.png" alt="Project Reactor" title="Logo: Project Reactor (reactor/projectreactor.io), Apache-2.0" width="260"/>
 
 A production-grade, multi-module learning platform that explores every dimension of reactive programming on the JVM — from raw Reactor operators, through reactive MongoDB and R2DBC/PostgreSQL persistence, Redis caching, a transactional outbox, WebSocket and SSE streaming, all the way to a Spring Cloud Gateway with JWT auth, Redis-backed rate limiting, canary routing, circuit breakers, and Testcontainers-backed integration tests.
 
@@ -171,6 +171,12 @@ Project Reactor is Pivotal's (now VMware/Broadcom's) implementation of Reactive 
 
 </ul>
 
+<p align="center">
+  <img src="image/reactor-mono.png" alt="Mono marble diagram: at most one item on the timeline, then completion or an error" width="560"/>
+</p>
+
+<p align="center"><sub>A <code>Mono</code> emits at most one item, then completes or errors. Diagram: <a href="https://projectreactor.io/docs/core/release/reference/">Project Reactor</a> marble diagram, Apache-2.0.</sub></p>
+
 ```java
 Mono<String> greeting = Mono.just("Hello World");
 Mono<MovieInfo> info   = repository.findById("abc123"); // 0 or 1 result
@@ -188,6 +194,12 @@ Mono<Void>     deleted = repository.deleteById("abc123");
 - Processing a collection item by item in a pipeline
 
 </ul>
+
+<p align="center">
+  <img src="image/reactor-flux.png" alt="Flux marble diagram: items on a left-to-right timeline, an operator box transforming them, completion bar or error cross" width="600"/>
+</p>
+
+<p align="center"><sub>How to read the marble diagrams in the Reactor javadoc: items flow left to right, the box is the operator, | is completion and X an error. Diagram: <a href="https://projectreactor.io/docs/core/release/reference/">Project Reactor</a> marble diagram, Apache-2.0.</sub></p>
 
 ```java
 Flux<String> names    = Flux.just("Alice", "Bob", "Carol");
@@ -213,6 +225,12 @@ Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future e
 ### <span style="color:hsl(261,80%,58%)">Operator Catalogue — What This Project Uses</span>
 
 #### <span style="color:hsl(39,80%,58%)">Transformation</span>
+
+<p align="center">
+  <img src="image/reactor-flatMapForFlux.png" alt="flatMap marble diagram: each source item becomes an inner publisher whose items are merged, possibly interleaved, into the output" width="520"/>
+</p>
+
+<p align="center"><sub><code>flatMap</code> subscribes to the inner publishers eagerly and merges their items, so output order can interleave — use <code>concatMap</code> when order matters. Diagram: <a href="https://projectreactor.io/docs/core/release/reference/">Project Reactor</a> marble diagram, Apache-2.0.</sub></p>
 
 | Operator    | What it does                                                           | Used where                                            |
 |-------------|------------------------------------------------------------------------|-------------------------------------------------------|
@@ -346,7 +364,7 @@ sequenceDiagram
         REV->>REV: reactive Mongo find (non-blocking driver)
         REV-->>MV: 200 Review[] JSON
     end
-    MV->>MV: flatMap: combine MovieInfo + List&lt;Review&gt; → Movie
+    MV->>MV: flatMap: combine MovieInfo + List#lt;Review#gt; → Movie
     MV-->>GW: 200 Movie JSON
     Note over GW: GlobalLoggingFilter logs ← 200, adds X-Correlation-Id
     GW-->>C: 200 Movie JSON
@@ -1367,7 +1385,7 @@ sequenceDiagram
     Note over App,DB: both writes target the same database —<br/>no distributed transaction needed
     loop every 5s
         Relay->>DB: findByStatus(PENDING)
-        DB-->>Relay: Flux&lt;OutboxEvent&gt;
+        DB-->>Relay: Flux#lt;OutboxEvent#gt;
         Relay->>Broker: publish (log.info in this demo)
         Relay->>DB: save(event with status=SENT)
     end
