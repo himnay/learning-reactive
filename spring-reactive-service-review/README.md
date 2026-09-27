@@ -1,6 +1,6 @@
 # <span style="color:hsl(48,80%,50%)">spring-reactive-service-review</span>
 
-A reactive CRUD service for movie reviews, backed by MongoDB. Architecturally, this is the **deliberate counterpart** to `spring-reactive-service-info`: both are WebFlux + reactive MongoDB services doing similar CRUD + SSE work, but this module is written entirely in Spring WebFlux's **functional** style (`RouterFunction` + `Handler`) instead of the annotation-based `@RestController` style used by the info service. Read both modules side by side to see the same problem solved two different ways.
+A reactive CRUD service for movie reviews, backed by MongoDB. Architecturally, this is the **deliberate counterpart** to `spring-reactive-service-info`: both are WebFlux + reactive MongoDB services doing similar CRUD + SSE work, but this module is written entirely in Spring WebFlux's **functional** style ([`RouterFunction`][RouterFunction] + `Handler`) instead of the annotation-based [`@RestController`][RestController] style used by the info service. Read both modules side by side to see the same problem solved two different ways.
 
 ```
 Port:    8081
@@ -26,7 +26,7 @@ This document assumes you've read the root [`README.md`](../README.md) for gener
 
 ## <span style="color:hsl(323,80%,58%)">1. Functional Routing: Router + Handler</span>
 
-Spring WebFlux offers two ways to declare HTTP endpoints. `spring-reactive-service-info` uses the annotation-based style (`@RestController`, `@GetMapping`) — see the root README's [§9](../README.md#9-spring-webflux-deep-dive). This module uses the **functional** style instead: routes are declared as data (a `RouterFunction<ServerResponse>` bean), and request handling logic lives in a separate `Handler` class with no Spring annotations on its methods at all.
+Spring WebFlux offers two ways to declare HTTP endpoints. `spring-reactive-service-info` uses the annotation-based style ([`@RestController`][RestController], [`@GetMapping`][GetMapping]) — see the root README's [§9](../README.md#9-spring-webflux-deep-dive). This module uses the **functional** style instead: routes are declared as data (a [`RouterFunction<ServerResponse>`][RouterFunction] bean), and request handling logic lives in a separate `Handler` class with no Spring annotations on its methods at all.
 
 ```java
 // ReviewRouter — pure routing table. No business logic, no annotations on the target methods.
@@ -62,7 +62,7 @@ public Mono<ServerResponse> addReview(ServerRequest request) {
 
 `.nest(path("/v1/reviews"), ...)` groups every review route under a shared path prefix, so the individual route declarations only specify the suffix (`""`, `"/{reviewId}"`, `"/stream"`). Two routes are registered for plain `GET ""`: one unconditional, and one additionally guarded by `queryParam("movieInfoId", i -> true)` — Spring evaluates route predicates in declaration order, so `GET /v1/reviews?movieInfoId=5` matches the queryParam-guarded route (letting `getReviews` branch on the presence of that parameter), while `GET /v1/reviews` with no query string falls through to the plain route. A `GET /v1/helloworld` route outside the `/v1/reviews` nest shows that a `RouterFunction` can freely mix nested and top-level routes in the same bean.
 
-**Why this style, and when to prefer it over annotations:** functional routing makes the entire route table visible in one place as ordinary Java — no scanning for `@RequestMapping`-annotated classes, no reflection-based route resolution. It is also directly unit-testable: `reviewRouterFunction()` returns a plain `RouterFunction<ServerResponse>` you can invoke against a mock `ServerRequest` without booting any web server. The annotation style (used by the info service) reads more familiarly to anyone coming from Spring MVC and integrates more naturally with tools that inspect `@RequestMapping` metadata (like springdoc/OpenAPI generators).
+**Why this style, and when to prefer it over annotations:** functional routing makes the entire route table visible in one place as ordinary Java — no scanning for [`@RequestMapping`][RequestMapping]-annotated classes, no reflection-based route resolution. It is also directly unit-testable: `reviewRouterFunction()` returns a plain `RouterFunction<ServerResponse>` you can invoke against a mock [`ServerRequest`][ServerRequest] without booting any web server. The annotation style (used by the info service) reads more familiarly to anyone coming from Spring MVC and integrates more naturally with tools that inspect `@RequestMapping` metadata (like springdoc/OpenAPI generators).
 
 ## <span style="color:hsl(101,80%,58%)">2. Request Flow</span>
 
@@ -90,11 +90,11 @@ sequenceDiagram
     end
 ```
 
-Every step in `addReview` is one non-blocking operator in a single chain: deserialize the body, validate (synchronously, but as a pipeline side-effect via `doOnNext`), save to MongoDB, publish to the SSE sink, then serialize the response. No step blocks the Netty event-loop thread — `bodyToMono`, `reviewRepository.save`, and `ServerResponse...bodyValue` are all asynchronous under the hood.
+Every step in `addReview` is one non-blocking operator in a single chain: deserialize the body, validate (synchronously, but as a pipeline side-effect via `doOnNext`), save to MongoDB, publish to the SSE sink, then serialize the response. No step blocks the Netty event-loop thread — `bodyToMono`, `reviewRepository.save`, and [`ServerResponse...bodyValue`][ServerResponse] are all asynchronous under the hood.
 
 ## <span style="color:hsl(238,80%,58%)">3. Manual Validation Instead of `@Valid`</span>
 
-`ServerRequest.bodyToMono(...)` in functional routing does **not** trigger Spring's Bean Validation automatically — there is no controller-method parameter for `@Valid` to attach to. This module works around that with an explicit `ReviewValidator` component that runs Jakarta Bean Validation's `Validator` programmatically:
+[`ServerRequest.bodyToMono(...)`][ServerRequest] in functional routing does **not** trigger Spring's Bean Validation automatically — there is no controller-method parameter for [`@Valid`][Valid] to attach to. This module works around that with an explicit `ReviewValidator` component that runs Jakarta Bean Validation's [`Validator`][Validator] programmatically:
 
 ```java
 @Component
@@ -114,11 +114,11 @@ public class ReviewValidator {
 }
 ```
 
-`ReviewDocument`'s constraints (`@NotNull` on `movieInfoId`, `@Min(0)` on `rating`) are ordinary Jakarta Validation annotations — the same annotation vocabulary as the info service's `@NotBlank`/`@Positive` on `MovieInfoDocument`. What differs is *who* triggers the check: in the annotation-based info service, `@Valid` on the controller parameter makes Spring do it; here, `ReviewHandler.addReview` explicitly calls `reviewValidator.validate(...)` inside a `.doOnNext(...)` step of its own pipeline. `ReviewValidator` throws a plain `RuntimeException` (`ReviewDataException`) rather than emitting a reactive error signal directly — Reactor treats an exception thrown from within an operator's lambda the same as an explicit `Mono.error(...)`, so it still propagates downstream as an error signal, just via a different syntax.
+`ReviewDocument`'s constraints ([`@NotNull`][NotNull] on `movieInfoId`, [`@Min(0)`][Min] on `rating`) are ordinary Jakarta Validation annotations — the same annotation vocabulary as the info service's [`@NotBlank`][NotBlank]/[`@Positive`][Positive] on `MovieInfoDocument`. What differs is *who* triggers the check: in the annotation-based info service, `@Valid` on the controller parameter makes Spring do it; here, `ReviewHandler.addReview` explicitly calls `reviewValidator.validate(...)` inside a `.doOnNext(...)` step of its own pipeline. `ReviewValidator` throws a plain [`RuntimeException`][RuntimeException] (`ReviewDataException`) rather than emitting a reactive error signal directly — Reactor treats an exception thrown from within an operator's lambda the same as an explicit [`Mono.error(...)`][Mono], so it still propagates downstream as an error signal, just via a different syntax.
 
 ## <span style="color:hsl(16,80%,58%)">4. Global Error Handling: `ErrorWebExceptionHandler`</span>
 
-The info and movies services use `@RestControllerAdvice` + `@ExceptionHandler` for centralized error mapping — an annotation-based mechanism that only applies to annotated controller methods. Functional routing has no controller methods for `@ExceptionHandler` to attach to, so this module instead implements Spring WebFlux's lower-level `ErrorWebExceptionHandler` SPI directly:
+The info and movies services use [`@RestControllerAdvice`][RestControllerAdvice] + [`@ExceptionHandler`][ExceptionHandler] for centralized error mapping — an annotation-based mechanism that only applies to annotated controller methods. Functional routing has no controller methods for `@ExceptionHandler` to attach to, so this module instead implements Spring WebFlux's lower-level [`ErrorWebExceptionHandler`][ErrorWebExceptionHandler] SPI directly:
 
 ```java
 @Component
@@ -140,7 +140,7 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
 }
 ```
 
-`ErrorWebExceptionHandler` sits below the `DispatcherHandler`/routing layer entirely — it intercepts *any* unhandled exception that escapes a `RouterFunction`'s handler chain, regardless of whether the app is written functionally or with annotations. This module writes the response body directly to a `DataBuffer` rather than returning a typed object, because at this layer there is no content-negotiation/`HttpMessageWriter` machinery available the way there is inside a normal handler method — it is working one level closer to the raw `ServerWebExchange`.
+`ErrorWebExceptionHandler` sits below the [`DispatcherHandler`][DispatcherHandler]/routing layer entirely — it intercepts *any* unhandled exception that escapes a [`RouterFunction`][RouterFunction]'s handler chain, regardless of whether the app is written functionally or with annotations. This module writes the response body directly to a [`DataBuffer`][DataBuffer] rather than returning a typed object, because at this layer there is no content-negotiation/[`HttpMessageWriter`][HttpMessageWriter] machinery available the way there is inside a normal handler method — it is working one level closer to the raw [`ServerWebExchange`][ServerWebExchange].
 
 | Exception                 | Meaning                                              | Status                      |
 |---------------------------|------------------------------------------------------|-----------------------------|
@@ -160,7 +160,7 @@ public Mono<ServerResponse> getReviewsStream(ServerRequest request) {
 }
 ```
 
-Contrast this with the info service's `Sinks.many().replay().all()` (root README [§10](../README.md#10-server-sent-events-and-sinks)): `replay().latest()` means a *new* SSE subscriber only receives the single most-recently-emitted review, plus everything emitted after it subscribes — not the full history since service startup. This is the right choice for a "what just happened" live feed where an unbounded replay buffer would otherwise grow forever; the info service's `replay().all()`, by contrast, is appropriate when new subscribers genuinely need the full event history (e.g., an audit trail). The output format also differs from the info service: this endpoint emits `application/x-ndjson` (newline-delimited raw JSON objects), not the `text/event-stream` framing (`id`/`event`/`data`) the info service now uses.
+Contrast this with the info service's [`Sinks.many().replay().all()`][Sinks] (root README [§10](../README.md#10-server-sent-events-and-sinks)): `replay().latest()` means a *new* SSE subscriber only receives the single most-recently-emitted review, plus everything emitted after it subscribes — not the full history since service startup. This is the right choice for a "what just happened" live feed where an unbounded replay buffer would otherwise grow forever; the info service's `replay().all()`, by contrast, is appropriate when new subscribers genuinely need the full event history (e.g., an audit trail). The output format also differs from the info service: this endpoint emits `application/x-ndjson` (newline-delimited raw JSON objects), not the `text/event-stream` framing (`id`/`event`/`data`) the info service now uses.
 
 ## <span style="color:hsl(291,80%,58%)">6. Endpoints</span>
 
@@ -184,7 +184,7 @@ Contrast this with the info service's `Sinks.many().replay().all()` (root README
   "rating": 9.5
 }
 ```
-`rating` must be `>= 0`; `movieInfoId` must be present. `reviewId` is server-generated (MongoDB `@Id`) — omit it on `POST`.
+`rating` must be `>= 0`; `movieInfoId` must be present. `reviewId` is server-generated (MongoDB [`@Id`][Id]) — omit it on `POST`.
 
 ### <span style="color:hsl(68,80%,50%)">Example</span>
 
@@ -210,7 +210,7 @@ mvn test
 
 - **`unit/ReviewTest`** — plain unit test, no Spring context.
 - **`intg/.../repository/ReviewRepositoryInt`** — repository-level integration test.
-- **`intg/.../router/ReviewInt`** — full `@SpringBootTest` + Testcontainers integration test:
+- **`intg/.../router/ReviewInt`** — full [`@SpringBootTest`][SpringBootTest] + Testcontainers integration test:
   ```java
   @SpringBootTest
   @Testcontainers
@@ -222,7 +222,7 @@ mvn test
       ...
   }
   ```
-  `@ServiceConnection` auto-configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB instance — no hardcoded port in `application-test.yml`. This exercises the real `RouterFunction` → `ReviewHandler` → `ReviewRepository` chain end to end via `WebTestClient`, against a real (containerized) MongoDB.
+  [`@ServiceConnection`][ServiceConnection] auto-configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB instance — no hardcoded port in `application-test.yml`. This exercises the real [`RouterFunction`][RouterFunction] → `ReviewHandler` → `ReviewRepository` chain end to end via [`WebTestClient`][WebTestClient], against a real (containerized) MongoDB.
 
 ## <span style="color:hsl(343,80%,58%)">8. Running This Module</span>
 
@@ -236,3 +236,32 @@ cd .. && mvn clean package -pl spring-reactive-service-review
 ```
 
 This module inherits shared dependency management from the root `learning-reactive-parent` POM. See the root [`README.md`](../README.md) for the full multi-module build, the whole system's `docker-compose.yml`-based infrastructure startup, and how this service fits into the gateway-fronted architecture.
+
+<!-- Library classes mentioned above, linked to their source at the versions this project builds with. -->
+
+[DataBuffer]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-core/src/main/java/org/springframework/core/io/buffer/DataBuffer.java
+[DispatcherHandler]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/DispatcherHandler.java
+[ErrorWebExceptionHandler]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/module/spring-boot-webflux/src/main/java/org/springframework/boot/webflux/error/ErrorWebExceptionHandler.java
+[ExceptionHandler]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/ExceptionHandler.java
+[GetMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/GetMapping.java
+[HttpMessageWriter]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/http/codec/HttpMessageWriter.java
+[Id]: https://github.com/spring-projects/spring-data-commons/blob/4.1.1/src/main/java/org/springframework/data/annotation/Id.java
+[Min]: https://github.com/jakartaee/validation/blob/3.1.1/src/main/java/jakarta/validation/constraints/Min.java
+[Mono]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Mono.java
+[NotBlank]: https://github.com/jakartaee/validation/blob/3.1.1/src/main/java/jakarta/validation/constraints/NotBlank.java
+[NotNull]: https://github.com/jakartaee/validation/blob/3.1.1/src/main/java/jakarta/validation/constraints/NotNull.java
+[Positive]: https://github.com/jakartaee/validation/blob/3.1.1/src/main/java/jakarta/validation/constraints/Positive.java
+[RequestMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RequestMapping.java
+[RestController]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RestController.java
+[RestControllerAdvice]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RestControllerAdvice.java
+[RouterFunction]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/RouterFunction.java
+[RuntimeException]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/RuntimeException.java
+[ServerRequest]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/ServerRequest.java
+[ServerResponse]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/ServerResponse.java
+[ServerWebExchange]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/server/ServerWebExchange.java
+[ServiceConnection]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-testcontainers/src/main/java/org/springframework/boot/testcontainers/service/connection/ServiceConnection.java
+[Sinks]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Sinks.java
+[SpringBootTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-test/src/main/java/org/springframework/boot/test/context/SpringBootTest.java
+[Valid]: https://github.com/jakartaee/validation/blob/3.1.1/src/main/java/jakarta/validation/Valid.java
+[Validator]: https://github.com/jakartaee/validation/blob/3.1.1/src/main/java/jakarta/validation/Validator.java
+[WebTestClient]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-test/src/main/java/org/springframework/test/web/reactive/server/WebTestClient.java

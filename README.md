@@ -116,7 +116,7 @@ The same 8 cores handle thousands of concurrent connections. Threads are never i
 | Scenario                                               | Benefit                                                                |
 |--------------------------------------------------------|------------------------------------------------------------------------|
 | Many concurrent users, mostly I/O bound                | Dramatic reduction in thread count and memory                          |
-| Service aggregation (fan-out to N downstream services) | Parallel non-blocking fan-out with `Mono.zip`                          |
+| Service aggregation (fan-out to N downstream services) | Parallel non-blocking fan-out with [`Mono.zip`][Mono]                  |
 | Real-time streaming (SSE, WebSocket)                   | Long-lived connections with zero thread per connection                 |
 | High-throughput event pipelines                        | Backpressure prevents fast producer from overloading slow consumer     |
 | Microservice-to-microservice calls                     | WebClient is fully non-blocking; RestTemplate blocks a thread per call |
@@ -146,11 +146,11 @@ Subscription   — link between Publisher and Subscriber: request(n), cancel()
 Processor<T,R> — both Publisher and Subscriber (transformation stage)
 ```
 
-The specification is included in Java 9+ as `java.util.concurrent.Flow.*`. The critical rule is **backpressure**: a Subscriber controls how many items it receives by calling `subscription.request(n)`. The Publisher must not emit more than `n` items until the next `request(n)` call. This prevents a fast producer from overwhelming a slow consumer.
+The specification is included in Java 9+ as [`java.util.concurrent.Flow.*`][Flow]. The critical rule is **backpressure**: a Subscriber controls how many items it receives by calling `subscription.request(n)`. The Publisher must not emit more than `n` items until the next `request(n)` call. This prevents a fast producer from overwhelming a slow consumer.
 
 ### <span style="color:hsl(294,80%,58%)">Why the Spec Matters</span>
 
-The spec defines interoperability. Project Reactor, RxJava, Akka Streams, and Vert.x all implement the same four interfaces, so their streams can interoperate. Spring WebFlux uses Reactor but can accept any `Publisher<T>`.
+The spec defines interoperability. Project Reactor, RxJava, Akka Streams, and Vert.x all implement the same four interfaces, so their streams can interoperate. Spring WebFlux uses Reactor but can accept any [`Publisher<T>`][Publisher].
 
 ---
 
@@ -161,7 +161,7 @@ Project Reactor is Pivotal's (now VMware/Broadcom's) implementation of Reactive 
 
 ### <span style="color:hsl(209,80%,58%)">Mono\<T\></span>
 
-`Mono<T>` is a Publisher that emits **0 or 1 items** then completes (or errors). Use it for:
+[`Mono<T>`][Mono] is a Publisher that emits **0 or 1 items** then completes (or errors). Use it for:
 
 <ul>
 
@@ -185,7 +185,7 @@ Mono<Void>     deleted = repository.deleteById("abc123");
 
 ### <span style="color:hsl(346,80%,58%)">Flux\<T\></span>
 
-`Flux<T>` is a Publisher that emits **0 to N items** then completes (or errors). Use it for:
+[`Flux<T>`][Flux] is a Publisher that emits **0 to N items** then completes (or errors). Use it for:
 
 <ul>
 
@@ -211,7 +211,7 @@ Flux<Long>   ticker    = Flux.interval(Duration.ofSeconds(1)); // infinite
 
 **Cold** — each subscriber gets its own independent data stream starting from the beginning. A database query is cold: every subscriber triggers a fresh query.
 
-**Hot** — all subscribers share one live stream. Items emitted before subscription are missed (or replayed, depending on the hot source type). `Sinks` in this project produce hot publishers.
+**Hot** — all subscribers share one live stream. Items emitted before subscription are missed (or replayed, depending on the hot source type). [`Sinks`][Sinks] in this project produce hot publishers.
 
 ```java
 // Cold — each subscriber re-runs the DB query
@@ -232,12 +232,12 @@ Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future e
 
 <p align="center"><sub><code>flatMap</code> subscribes to the inner publishers eagerly and merges their items, so output order can interleave — use <code>concatMap</code> when order matters. Diagram: <a href="https://projectreactor.io/docs/core/release/reference/">Project Reactor</a> marble diagram, Apache-2.0.</sub></p>
 
-| Operator    | What it does                                                           | Used where                                            |
-|-------------|------------------------------------------------------------------------|-------------------------------------------------------|
-| `map`       | 1-to-1 synchronous transform of each item                              | `FluxFlow` — uppercase, length prefix                 |
-| `flatMap`   | 1-to-many async transform, subscribes to inner publishers concurrently | `MoviesController` — for each movieInfo fetch reviews |
-| `concatMap` | Like `flatMap` but preserves order (subscribes serially)               | `FluxFlow` — demonstrates ordering                    |
-| `transform` | Applies a reusable `Function<Flux<T>, Flux<R>>` to the pipeline        | `FluxFlow` — extract shared map+filter logic          |
+| Operator    | What it does                                                                | Used where                                            |
+|-------------|-----------------------------------------------------------------------------|-------------------------------------------------------|
+| `map`       | 1-to-1 synchronous transform of each item                                   | `FluxFlow` — uppercase, length prefix                 |
+| `flatMap`   | 1-to-many async transform, subscribes to inner publishers concurrently      | `MoviesController` — for each movieInfo fetch reviews |
+| `concatMap` | Like `flatMap` but preserves order (subscribes serially)                    | `FluxFlow` — demonstrates ordering                    |
+| `transform` | Applies a reusable [`Function<Flux<T>, Flux<R>>`][Function] to the pipeline | `FluxFlow` — extract shared map+filter logic          |
 
 #### <span style="color:hsl(176,80%,58%)">Filtering</span>
 
@@ -249,12 +249,12 @@ Flux<MovieInfo> hot  = sink.asFlux(); // new subscriber gets all past + future e
 
 #### <span style="color:hsl(314,80%,58%)">Combination (demonstrated in `CombineMonoFlux`)</span>
 
-| Operator                     | Behaviour                                                 | Order preserved? |
-|------------------------------|-----------------------------------------------------------|------------------|
-| `Flux.concat` / `concatWith` | Subscribe to second only after first completes            | Yes              |
-| `Flux.merge` / `mergeWith`   | Subscribe to both immediately, interleave by arrival time | No               |
-| `Flux.mergeSequential`       | Subscribe to both immediately, emit in subscription order | Yes              |
-| `Flux.zip` / `zipWith`       | Pair items from N publishers by index                     | Yes              |
+| Operator                             | Behaviour                                                 | Order preserved? |
+|--------------------------------------|-----------------------------------------------------------|------------------|
+| [`Flux.concat`][Flux] / `concatWith` | Subscribe to second only after first completes            | Yes              |
+| `Flux.merge` / `mergeWith`           | Subscribe to both immediately, interleave by arrival time | No               |
+| `Flux.mergeSequential`               | Subscribe to both immediately, emit in subscription order | Yes              |
+| `Flux.zip` / `zipWith`               | Pair items from N publishers by index                     | Yes              |
 
 #### <span style="color:hsl(91,80%,58%)">Error Handling</span>
 
@@ -291,7 +291,7 @@ Flux<MovieInfo> pipeline = repository.findAll()
 pipeline.subscribe(); // NOW the query runs
 ```
 
-In Spring WebFlux, the framework subscribes on your behalf when you return a `Mono<T>` or `Flux<T>` from a controller method. You almost never call `.subscribe()` directly in application code.
+In Spring WebFlux, the framework subscribes on your behalf when you return a [`Mono<T>`][Mono] or [`Flux<T>`][Flux] from a controller method. You almost never call `.subscribe()` directly in application code.
 
 ---
 
@@ -370,7 +370,7 @@ sequenceDiagram
     GW-->>C: 200 Movie JSON
 ```
 
-Note that the two downstream calls in `MoviesController` are shown here as concurrent (`par`) — this is what a `Mono.zip`-based rewrite would achieve. The actual shipped implementation issues the review call inside a `flatMap` after the movie-info call resolves (sequential fan-out); see [Module 4](#module-4-spring-reactive-service-movies) for the exact code and the parallel alternative.
+Note that the two downstream calls in `MoviesController` are shown here as concurrent (`par`) — this is what a [`Mono.zip`][Mono]-based rewrite would achieve. The actual shipped implementation issues the review call inside a `flatMap` after the movie-info call resolves (sequential fan-out); see [Module 4](#module-4-spring-reactive-service-movies) for the exact code and the parallel alternative.
 
 ---
 
@@ -379,7 +379,7 @@ Note that the two downstream calls in `MoviesController` are shown here as concu
 
 ### <span style="color:hsl(334,80%,58%)">Module 1: `non-spring-reactive-reactor-core`</span>
 
-**Purpose:** Learn raw Reactor operators with zero Spring context. All tests run synchronously using `StepVerifier` — no application server, no DI, no database.
+**Purpose:** Learn raw Reactor operators with zero Spring context. All tests run synchronously using [`StepVerifier`][StepVerifier] — no application server, no DI, no database.
 
 **Key classes:**
 
@@ -407,9 +407,9 @@ concatMap(name → split chars + random delay):
 
 **Purpose:** A full CRUD reactive REST service with MongoDB persistence, field-level validation, global exception handling, and SSE streaming.
 
-**Architecture style:** Annotation-based `@RestController` implementing a `@RequestMapping` interface (`MovieInfoApi`). The interface owns all annotations; the controller is a pure implementation class.
+**Architecture style:** Annotation-based [`@RestController`][RestController] implementing a [`@RequestMapping`][RequestMapping] interface (`MovieInfoApi`). The interface owns all annotations; the controller is a pure implementation class.
 
-**Domain:** `MovieInfoDocument` — a Java record annotated with `@Document` (MongoDB) and Bean Validation constraints:
+**Domain:** `MovieInfoDocument` — a Java record annotated with [`@Document`][Document] (MongoDB) and Bean Validation constraints:
 ```java
 @Document
 public record MovieInfoDocument(
@@ -423,22 +423,22 @@ public record MovieInfoDocument(
 
 **Port:** 8080
 
-**Filtering:** `GET /v1/movieInfos?year=2023` and `GET /v1/movieInfos?name=Batman` are implemented by reading `@RequestParam Map<String, String> filterCriteria`. The key type must be `String` — Spring cannot auto-convert string query-param keys to enum types, so `Map<EnumType, String>` always arrives empty.
+**Filtering:** `GET /v1/movieInfos?year=2023` and `GET /v1/movieInfos?name=Batman` are implemented by reading `@RequestParam Map<String, String> filterCriteria`. The key type must be [`String`][String] — Spring cannot auto-convert string query-param keys to enum types, so [`Map<EnumType, String>`][Map] always arrives empty.
 
-**SSE Stream:** `GET /v1/movieInfo/stream` returns real `text/event-stream` frames (`ServerSentEvent<MovieInfoDocument>` with `id`/`event`/`data`), not raw JSON. A `Sinks.Many<MovieInfoDocument>` configured as `replay().all()` means new SSE subscribers receive ALL past events (full replay) then live events. See [§10](#10-server-sent-events-and-sinks) for the wire-format detail and how it differs from the review service's NDJSON stream.
+**SSE Stream:** `GET /v1/movieInfo/stream` returns real `text/event-stream` frames ([`ServerSentEvent<MovieInfoDocument>`][ServerSentEvent] with `id`/`event`/`data`), not raw JSON. A [`Sinks.Many<MovieInfoDocument>`][Sinks] configured as `replay().all()` means new SSE subscribers receive ALL past events (full replay) then live events. See [§10](#10-server-sent-events-and-sinks) for the wire-format detail and how it differs from the review service's NDJSON stream.
 
-**Additional endpoints not shown above:** `POST /v1/movieInfo/batch` accepts a streaming `Flux<MovieInfoDocument>` request body for memory-efficient bulk inserts; `GET /v1/movieInfo/tailable` streams newly-inserted documents in real time via a MongoDB **tailable cursor** against a capped collection (`@Tailable` on `MovieInfoRepository.findWithTailableCursorBy()`) — a different real-time mechanism from the `Sinks`-based SSE stream, driven by the database itself rather than an in-process sink; `GET /v1/movieInfo/summary` and `GET /v1/movieInfo/{id}/summary` return the `MovieSummary` projection described above; and `GET /v1/flux`, `/v1/mono`, `/v1/stream` are minimal `Flux`/`Mono`/infinite-`Flux.interval` demo endpoints kept from the original "hello reactive world" exercise.
+**Additional endpoints not shown above:** `POST /v1/movieInfo/batch` accepts a streaming [`Flux<MovieInfoDocument>`][Flux] request body for memory-efficient bulk inserts; `GET /v1/movieInfo/tailable` streams newly-inserted documents in real time via a MongoDB **tailable cursor** against a capped collection ([`@Tailable`][Tailable] on `MovieInfoRepository.findWithTailableCursorBy()`) — a different real-time mechanism from the `Sinks`-based SSE stream, driven by the database itself rather than an in-process sink; `GET /v1/movieInfo/summary` and `GET /v1/movieInfo/{id}/summary` return the `MovieSummary` projection described above; and `GET /v1/flux`, `/v1/mono`, `/v1/stream` are minimal `Flux`/[`Mono`][Mono]/infinite-`Flux.interval` demo endpoints kept from the original "hello reactive world" exercise.
 
-**Caveat:** `MovieInfoCacheService` (the Redis cache-aside component described in [§15](#15-reactive-caching-with-redis)) is a standalone `@Service` — nothing in `MovieInfoController` or `MovieInfoServiceImpl` currently calls it, so reads always go straight to MongoDB. It demonstrates the cache-aside pattern in isolation, ready to be wired into `getMovieById`/`getAllMovies` as a follow-up exercise, but as shipped it is not yet on the live read path.
+**Caveat:** `MovieInfoCacheService` (the Redis cache-aside component described in [§15](#15-reactive-caching-with-redis)) is a standalone [`@Service`][Service] — nothing in `MovieInfoController` or `MovieInfoServiceImpl` currently calls it, so reads always go straight to MongoDB. It demonstrates the cache-aside pattern in isolation, ready to be wired into `getMovieById`/`getAllMovies` as a follow-up exercise, but as shipped it is not yet on the live read path.
 
 The info service is the most feature-dense module in the repo — beyond basic CRUD it also demonstrates four additional reactive patterns, each covered in depth in its own section later in this document:
 
 <ul>
 
-- **Reactive caching (cache-aside) with Redis** — `cache/MovieInfoCacheService` wraps a `ReactiveRedisTemplate<String, MovieInfoDocument>` and implements a non-blocking cache-aside pattern (`get` → on miss, `loader` → `set` with a 10-minute TTL). See [§15](#15-reactive-caching-with-redis).
-- **Transactional Outbox pattern** — `outbox/OutboxService`, `OutboxEvent`, and `OutboxRepository` persist domain events as `PENDING` and relay them on a `@Scheduled` fixed-delay loop, avoiding the dual-write problem between the database and a message broker. See [§16](#16-transactional-outbox-pattern).
-- **Reactive WebSocket** — `websocket/MovieInfoWebSocketHandler` implements `WebSocketHandler` directly (not SSE) using a multicast `Sinks.Many<String>` to broadcast every inbound client message to all connected sessions. See [§17](#17-reactive-websocket).
-- **MongoDB field projections** — `projection/MovieInfoProjectionRepository` uses `@Query(fields = ...)` to return a slim `MovieSummary` record instead of the full `MovieInfoDocument`, a lightweight CQRS-style read model for list views.
+- **Reactive caching (cache-aside) with Redis** — `cache/MovieInfoCacheService` wraps a [`ReactiveRedisTemplate<String, MovieInfoDocument>`][ReactiveRedisTemplate] and implements a non-blocking cache-aside pattern (`get` → on miss, `loader` → `set` with a 10-minute TTL). See [§15](#15-reactive-caching-with-redis).
+- **Transactional Outbox pattern** — `outbox/OutboxService`, `OutboxEvent`, and `OutboxRepository` persist domain events as `PENDING` and relay them on a [`@Scheduled`][Scheduled] fixed-delay loop, avoiding the dual-write problem between the database and a message broker. See [§16](#16-transactional-outbox-pattern).
+- **Reactive WebSocket** — `websocket/MovieInfoWebSocketHandler` implements [`WebSocketHandler`][WebSocketHandler] directly (not SSE) using a multicast `Sinks.Many<String>` to broadcast every inbound client message to all connected sessions. See [§17](#17-reactive-websocket).
+- **MongoDB field projections** — `projection/MovieInfoProjectionRepository` uses [`@Query(fields = ...)`][Query] to return a slim `MovieSummary` record instead of the full `MovieInfoDocument`, a lightweight CQRS-style read model for list views.
 - **Reactor Context → MDC bridging** — `util/ReactiveLogger` shows the correct (and only safe) way to get correlation data into SLF4J's `MDC` from a reactive pipeline: read it out of `Mono.deferContextual`, `MDC.put` synchronously, log, then `MDC.remove` in the same synchronous block — never leaving it set across a thread hop.
 
 </ul>
@@ -449,7 +449,7 @@ The info service is the most feature-dense module in the repo — beyond basic C
 
 **Purpose:** A reactive review service demonstrating the **functional router/handler** style of WebFlux routing, as an explicit contrast to the annotation-based style in the info service.
 
-**Architecture style:** Functional — `RouterFunction<ServerResponse>` (defines routes) + `ReviewHandler` (handles requests). There are no `@Controller` or `@RequestMapping` annotations anywhere on handler methods.
+**Architecture style:** Functional — [`RouterFunction<ServerResponse>`][RouterFunction] (defines routes) + `ReviewHandler` (handles requests). There are no [`@Controller`][Controller] or [`@RequestMapping`][RequestMapping] annotations anywhere on handler methods.
 
 ```java
 // Router — only defines the URL structure and HTTP verbs
@@ -477,9 +477,9 @@ public Mono<ServerResponse> addReview(ServerRequest request) {
 
 **Port:** 8081
 
-**SSE:** `Sinks.many().replay().latest()` — new subscribers only get the most recent event, not the full history.
+**SSE:** [`Sinks.many().replay().latest()`][Sinks] — new subscribers only get the most recent event, not the full history.
 
-**Validation:** Manual `ReviewValidator` instead of `@Valid`, because `ServerRequest.bodyToMono` does not trigger Bean Validation automatically in functional routing. The validator throws `ReviewDataException` which the `GlobalExceptionHandler` converts to 400.
+**Validation:** Manual `ReviewValidator` instead of [`@Valid`][Valid], because [`ServerRequest.bodyToMono`][ServerRequest] does not trigger Bean Validation automatically in functional routing. The validator throws `ReviewDataException` which the `GlobalExceptionHandler` converts to 400.
 
 ---
 
@@ -497,7 +497,7 @@ movieInfoClient.retrieveMovieInfo(movieId)   // Mono<MovieInfo>
     )
 ```
 
-Note: This is sequential fan-out (reviews fetched after movie info arrives). A true parallel fan-out where both calls start simultaneously uses `Mono.zip`:
+Note: This is sequential fan-out (reviews fetched after movie info arrives). A true parallel fan-out where both calls start simultaneously uses [`Mono.zip`][Mono]:
 ```java
 // Parallel alternative — both HTTP calls fire at the same time
 Mono.zip(
@@ -524,7 +524,7 @@ Mono.zip(
 
 **Purpose:** A CRUD service for a `Genre` entity backed by **PostgreSQL via R2DBC** — the reactive counterpart to the MongoDB modules. It exists specifically to contrast a reactive *relational* database driver against the reactive *document* drivers used elsewhere in the project, including how reactive transactions work when there is no shared-connection-per-thread assumption to lean on.
 
-**Domain:** `Genre` — a Java record mapped with `@Table`/`@Id` (Spring Data R2DBC, not JPA):
+**Domain:** `Genre` — a Java record mapped with [`@Table`][Table]/[`@Id`][Id] (Spring Data R2DBC, not JPA):
 ```java
 @Table("genres")
 public record Genre(
@@ -541,18 +541,18 @@ public record Genre(
 
 **Port:** 8083
 
-**Repository:** `GenreRepository extends ReactiveCrudRepository<Genre, Long>` adds a derived query (`findByNameContainingIgnoreCase`) and a custom `@Query`-annotated SQL method:
+**Repository:** `GenreRepository extends ReactiveCrudRepository<Genre, Long>` adds a derived query (`findByNameContainingIgnoreCase`) and a custom [`@Query`][Query (org.springframework.data.r2dbc.repository)]-annotated SQL method:
 ```java
 @Query("SELECT * FROM genres WHERE created_at > NOW() - INTERVAL '1 day' ORDER BY created_at DESC")
 Flux<Genre> findRecentGenres();
 ```
 Unlike JPA/JDBC, R2DBC's `@Query` executes over the reactive PostgreSQL wire protocol (`r2dbc-postgresql`) — the query never blocks a thread waiting for the result set.
 
-**Reactive transactions:** `GenreService` is constructed with a `TransactionalOperator` and wraps writes explicitly, e.g. `txOperator.transactional(repository.save(genre))`. This is the reactive equivalent of `@Transactional` — imperative `@Transactional` relies on a `ThreadLocal`-bound connection, which does not exist in a reactive pipeline where execution hops schedulers. `TransactionalOperator.transactional(...)` instead threads the transaction context through the Reactor `Context`, and rolls back automatically if the wrapped `Mono`/`Flux` emits an error.
+**Reactive transactions:** `GenreService` is constructed with a [`TransactionalOperator`][TransactionalOperator] and wraps writes explicitly, e.g. `txOperator.transactional(repository.save(genre))`. This is the reactive equivalent of [`@Transactional`][Transactional] — imperative `@Transactional` relies on a [`ThreadLocal`][ThreadLocal]-bound connection, which does not exist in a reactive pipeline where execution hops schedulers. `TransactionalOperator.transactional(...)` instead threads the transaction context through the Reactor [`Context`][Context], and rolls back automatically if the wrapped [`Mono`][Mono]/[`Flux`][Flux] emits an error.
 
 **Bulk insert:** `createBatch(List<Genre>)` calls `repository.saveAll(Flux.fromIterable(genres))` inside the same `TransactionalOperator` — the whole batch commits or rolls back as one unit, and because the input is a `Flux` rather than a materialized list internally, it composes naturally with a streaming request body if the controller were changed to accept NDJSON.
 
-**Auditing:** `@EnableR2dbcAuditing` (in `R2dbcConfig`) automatically populates the `@CreatedDate` field on insert — no manual timestamping in service code.
+**Auditing:** [`@EnableR2dbcAuditing`][EnableR2dbcAuditing] (in `R2dbcConfig`) automatically populates the [`@CreatedDate`][CreatedDate] field on insert — no manual timestamping in service code.
 
 **Endpoints:** `GET /v1/genres`, `GET /v1/genres/{id}`, `GET /v1/genres/search?name=`, `POST /v1/genres`, `POST /v1/genres/batch`, `PUT /v1/genres/{id}`, `DELETE /v1/genres/{id}`.
 
@@ -568,14 +568,14 @@ All client applications should target `http://localhost:8765` instead of individ
 
 **Filter chain (in execution order):**
 
-| Order                     | Filter                                                    | Responsibility                                                                                                                                                                                                                                               |
-|---------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `HIGHEST_PRECEDENCE − 1`  | `RequestIdWebFilter`                                      | Honours an inbound `X-Request-Id` or mints a UUID; writes it into Reactor `Context` for downstream operators, not just the header                                                                                                                            |
-| `HIGHEST_PRECEDENCE`      | `GlobalLoggingFilter`                                     | Generates/propagates `X-Correlation-Id`; logs `→`/`←` request and response lines with timing                                                                                                                                                                 |
-| `HIGHEST_PRECEDENCE + 10` | `JwtAuthenticationWebFilter`                              | Validates the `Bearer` JWT (via `jjwt`) on every path except `/actuator/**`, `/fallback/**`, `/v1/public/**`; injects `X-User-Id` from the token's subject claim so downstream services trust the caller identity without re-validating the token themselves |
-| route-level               | `RequestRateLimiter` (default-filter, all routes)         | Redis-backed token bucket (`replenishRate: 10`, `burstCapacity: 20`) keyed by `userKeyResolver` — prefers `X-User-Id` (set by the JWT filter) and falls back to the caller's remote IP for public/unauthenticated routes                                     |
-| route-level               | `PreFilter` / `PostFilter` (named `GatewayFilterFactory`) | Stamp `X-Gateway-Version` and compute `X-Response-Time-Ms` on selected YAML routes                                                                                                                                                                           |
-| route-level               | `circuitBreaker` (Resilience4j)                           | Per-route circuit breaking with a `forward:/fallback/{service}` fallback URI                                                                                                                                                                                 |
+| Order                     | Filter                                                                            | Responsibility                                                                                                                                                                                                                                               |
+|---------------------------|-----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `HIGHEST_PRECEDENCE − 1`  | `RequestIdWebFilter`                                                              | Honours an inbound `X-Request-Id` or mints a UUID; writes it into Reactor [`Context`][Context] for downstream operators, not just the header                                                                                                                 |
+| `HIGHEST_PRECEDENCE`      | `GlobalLoggingFilter`                                                             | Generates/propagates `X-Correlation-Id`; logs `→`/`←` request and response lines with timing                                                                                                                                                                 |
+| `HIGHEST_PRECEDENCE + 10` | `JwtAuthenticationWebFilter`                                                      | Validates the `Bearer` JWT (via `jjwt`) on every path except `/actuator/**`, `/fallback/**`, `/v1/public/**`; injects `X-User-Id` from the token's subject claim so downstream services trust the caller identity without re-validating the token themselves |
+| route-level               | `RequestRateLimiter` (default-filter, all routes)                                 | Redis-backed token bucket (`replenishRate: 10`, `burstCapacity: 20`) keyed by `userKeyResolver` — prefers `X-User-Id` (set by the JWT filter) and falls back to the caller's remote IP for public/unauthenticated routes                                     |
+| route-level               | `PreFilter` / `PostFilter` (named [`GatewayFilterFactory`][GatewayFilterFactory]) | Stamp `X-Gateway-Version` and compute `X-Response-Time-Ms` on selected YAML routes                                                                                                                                                                           |
+| route-level               | `circuitBreaker` (Resilience4j)                                                   | Per-route circuit breaking with a `forward:/fallback/{service}` fallback URI                                                                                                                                                                                 |
 
 **JWT validation (`JwtAuthenticationWebFilter` + `TokenUtil`):** rejects requests with a missing/malformed `Authorization` header or an invalid/expired token with `401 Unauthorized` *before* the request reaches route matching — auth failures never count against a circuit breaker or reach a backend service.
 
@@ -631,7 +631,7 @@ The foundational pattern. Every Reactor pipeline is a publisher chain. The frame
 
 ### <span style="color:hsl(131,80%,58%)">Interface Segregation for Controllers</span>
 
-The info service defines a `MovieInfoApi` interface with all `@RequestMapping` annotations. The `MovieInfoController` implements it with zero Spring annotations of its own. This separates the HTTP contract (interface) from the implementation, making it possible to unit-test the controller logic with a mock `MovieInfoService` without any web context.
+The info service defines a `MovieInfoApi` interface with all [`@RequestMapping`][RequestMapping] annotations. The `MovieInfoController` implements it with zero Spring annotations of its own. This separates the HTTP contract (interface) from the implementation, making it possible to unit-test the controller logic with a mock `MovieInfoService` without any web context.
 
 ```java
 // Contract
@@ -651,11 +651,11 @@ public class MovieInfoController implements MovieInfoApi {
 
 ### <span style="color:hsl(269,80%,58%)">Functional Router/Handler (Command Pattern Variant)</span>
 
-The review service uses WebFlux's functional routing DSL. The `RouterFunction` is a pure function `(ServerRequest) → Optional<HandlerFunction>`. The `ReviewHandler` contains all business logic. This style is more composable and testable than annotation scanning — you can unit-test the handler by passing a `MockServerRequest` directly.
+The review service uses WebFlux's functional routing DSL. The [`RouterFunction`][RouterFunction] is a pure function `(ServerRequest) → Optional<HandlerFunction>`. The `ReviewHandler` contains all business logic. This style is more composable and testable than annotation scanning — you can unit-test the handler by passing a [`MockServerRequest`][MockServerRequest] directly.
 
 ### <span style="color:hsl(46,80%,50%)">Sinks — Reactive Event Bus</span>
 
-`Sinks.Many<T>` acts as a programmatic event bus. Application code calls `sink.tryEmitNext(item)` from anywhere (typically in a `.doOnNext` side-effect); the sink's `asFlux()` provides the hot publisher that SSE connections subscribe to.
+[`Sinks.Many<T>`][Sinks] acts as a programmatic event bus. Application code calls `sink.tryEmitNext(item)` from anywhere (typically in a `.doOnNext` side-effect); the sink's `asFlux()` provides the hot publisher that SSE connections subscribe to.
 
 ```
 POST /v1/movieInfo
@@ -702,7 +702,7 @@ Routes are split across two mechanisms:
 <ul>
 
 - **Programmatic** (`GatewayRoutesConfig.java`) for routes requiring type-safe filter config (circuit breakers, typed retry)
-- **Declarative YAML** (`application.yml`) for simpler SSE stream routes where named `GatewayFilterFactory` beans are sufficient
+- **Declarative YAML** (`application.yml`) for simpler SSE stream routes where named [`GatewayFilterFactory`][GatewayFilterFactory] beans are sufficient
 
 </ul>
 
@@ -719,7 +719,7 @@ WebFlux offers two distinct ways to write HTTP endpoints:
 
 #### <span style="color:hsl(289,80%,58%)">Annotation-based (info service)</span>
 
-Identical surface-level API to Spring MVC: `@RestController`, `@GetMapping`, `@RequestBody`, `@PathVariable`. The difference is that return types are `Mono<T>` or `Flux<T>` instead of `T` or `List<T>`.
+Identical surface-level API to Spring MVC: [`@RestController`][RestController], [`@GetMapping`][GetMapping], [`@RequestBody`][RequestBody], [`@PathVariable`][PathVariable]. The difference is that return types are [`Mono<T>`][Mono] or [`Flux<T>`][Flux] instead of `T` or [`List<T>`][List].
 
 ```java
 @GetMapping("/v1/movieInfo/{id}")
@@ -758,14 +758,14 @@ public Mono<ServerResponse> addReview(ServerRequest req) {
 WebFlux runs on Netty, an NIO event-loop server. Netty creates one thread per CPU core (the "event loop group"). All I/O happens on these threads asynchronously.
 
 When an HTTP request arrives:
-1. A Netty event-loop thread reads the bytes and builds the `ServerHttpRequest`
+1. A Netty event-loop thread reads the bytes and builds the [`ServerHttpRequest`][ServerHttpRequest]
 2. WebFlux assembles your Reactor pipeline (no I/O yet — this is just pipeline construction)
 3. The pipeline's I/O operations (DB reads, WebClient calls) register callbacks with the OS (epoll/kqueue)
 4. The event-loop thread is freed immediately to handle the next request
 5. When the OS signals data is ready, a callback fires on whichever event-loop thread is free
 6. The response bytes are written and the connection completes
 
-**Critical rule:** Never block on an event-loop thread. Calling `Thread.sleep()`, a blocking JDBC query, or `Mono.block()` inside a reactive pipeline starves all other requests sharing that thread.
+**Critical rule:** Never block on an event-loop thread. Calling [`Thread.sleep()`][Thread], a blocking JDBC query, or [`Mono.block()`][Mono] inside a reactive pipeline starves all other requests sharing that thread.
 
 ### <span style="color:hsl(341,80%,58%)">Schedulers — Switching Thread Contexts</span>
 
@@ -777,7 +777,7 @@ Mono.fromCallable(() -> legacyBlockingService.call())
     .flatMap(result -> reactiveRepository.save(result)); // back on event loop
 ```
 
-`Schedulers.boundedElastic()` is a thread pool designed for blocking I/O — it grows to handle demand and shrinks when idle, but its threads are separate from the Netty event loops.
+[`Schedulers.boundedElastic()`][Schedulers] is a thread pool designed for blocking I/O — it grows to handle demand and shrinks when idle, but its threads are separate from the Netty event loops.
 
 ---
 
@@ -790,9 +790,9 @@ Server-Sent Events (SSE) is an HTTP/1.1 protocol where the server sends a stream
 
 ### <span style="color:hsl(34,80%,58%)">How This Project Implements SSE</span>
 
-Both the info and review services use `Sinks.Many<T>` as the SSE event source. Each service has one in-memory sink; SSE subscribers receive events from that sink.
+Both the info and review services use [`Sinks.Many<T>`][Sinks] as the SSE event source. Each service has one in-memory sink; SSE subscribers receive events from that sink.
 
-**Info service** — `replay().all()`, real SSE framing via `ServerSentEvent<T>`:
+**Info service** — `replay().all()`, real SSE framing via [`ServerSentEvent<T>`][ServerSentEvent]:
 ```java
 private final Sinks.Many<MovieInfoDocument> movieInfoSinks = Sinks.many().replay().all();
 
@@ -846,7 +846,7 @@ SSE routes (`/v1/movieInfoStream`, `/v1/reviewsStream`) are in YAML without circ
 <a id="11-webclient--reactive-http"></a>
 ## <span style="color:hsl(86,80%,58%)">11. 🧵 WebClient — Reactive HTTP</span>
 
-`WebClient` is the reactive replacement for `RestTemplate`. Every method in the fluent API returns a `Mono` or `Flux` — the HTTP call does not start until subscription.
+[`WebClient`][WebClient] is the reactive replacement for [`RestTemplate`][RestTemplate]. Every method in the fluent API returns a [`Mono`][Mono] or [`Flux`][Flux] — the HTTP call does not start until subscription.
 
 ### <span style="color:hsl(224,80%,58%)">Building a Request</span>
 
@@ -874,7 +874,7 @@ webClient
 
 ### <span style="color:hsl(1,80%,58%)">Why `onStatus` Instead of Catching Exceptions Downstream</span>
 
-`retrieve()` throws `WebClientResponseException` for 4xx/5xx by default. `onStatus` intercepts specific status ranges before the body is deserialized and maps them to domain-specific typed exceptions. Downstream code can then `filter` retries by exception type and provide specific error messages to callers.
+`retrieve()` throws [`WebClientResponseException`][WebClientResponseException] for 4xx/5xx by default. `onStatus` intercepts specific status ranges before the body is deserialized and maps them to domain-specific typed exceptions. Downstream code can then `filter` retries by exception type and provide specific error messages to callers.
 
 ### <span style="color:hsl(139,80%,58%)">Retry Logic</span>
 
@@ -951,7 +951,7 @@ builder.routes()
     .build();
 ```
 
-Use when: circuit breakers needed; typed retry config; route URIs come from `@Value` beans; IDE refactoring support needed.
+Use when: circuit breakers needed; typed retry config; route URIs come from [`@Value`][Value] beans; IDE refactoring support needed.
 
 #### <span style="color:hsl(21,80%,58%)">Declarative YAML — for SSE stream routes with named filters</span>
 
@@ -972,7 +972,7 @@ spring:
 
 Use when: simple header manipulation; routes may change per environment without recompile; named Java filter factories provide the logic.
 
-**The hybrid principle:** YAML declares WHAT (route topology, which filters to apply, in which order). Java `GatewayFilterFactory` beans define HOW (what each filter does). This gives ops the ability to rewire routes without touching code, while developers own the filter implementation.
+**The hybrid principle:** YAML declares WHAT (route topology, which filters to apply, in which order). Java [`GatewayFilterFactory`][GatewayFilterFactory] beans define HOW (what each filter does). This gives ops the ability to rewire routes without touching code, while developers own the filter implementation.
 
 Both sets of routes are merged at startup — Spring Cloud Gateway treats them as a single route list.
 
@@ -1005,7 +1005,7 @@ public class GlobalLoggingFilter implements GlobalFilter, Ordered {
 
 #### <span style="color:hsl(74,80%,58%)">Named GatewayFilterFactory — `PreFilterGatewayFilterFactory` / `PostFilterGatewayFilterFactory`</span>
 
-Applied only to routes that list the filter by name. The naming convention is: class name minus `GatewayFilterFactory` suffix = the name used in YAML.
+Applied only to routes that list the filter by name. The naming convention is: class name minus [`GatewayFilterFactory`][GatewayFilterFactory] suffix = the name used in YAML.
 
 ```
 PreFilterGatewayFilterFactory  →  name: PreFilter  in YAML
@@ -1043,7 +1043,7 @@ PostFilterGatewayFilterFactory →  name: PostFilter in YAML
 
 #### <span style="color:hsl(349,80%,58%)">`WebFilter` — `RequestIdWebFilter` and `JwtAuthenticationWebFilter`</span>
 
-Not every cross-cutting concern is expressed as a `GatewayFilterFactory`. `RequestIdWebFilter` and `JwtAuthenticationWebFilter` are plain Spring WebFlux `WebFilter` beans — they run in the standard WebFlux filter chain, *before* Spring Cloud Gateway's own `GatewayFilterChain` even starts, which is exactly why they are the right place to put identity and correlation concerns that every route (proxied or not) must share.
+Not every cross-cutting concern is expressed as a [`GatewayFilterFactory`][GatewayFilterFactory]. `RequestIdWebFilter` and `JwtAuthenticationWebFilter` are plain Spring WebFlux [`WebFilter`][WebFilter] beans — they run in the standard WebFlux filter chain, *before* Spring Cloud Gateway's own [`GatewayFilterChain`][GatewayFilterChain] even starts, which is exactly why they are the right place to put identity and correlation concerns that every route (proxied or not) must share.
 
 ```java
 @Component
@@ -1066,8 +1066,8 @@ Two details worth calling out:
 
 <ul>
 
-- **`@Order` arithmetic as documentation.** `RequestIdWebFilter` is `HIGHEST_PRECEDENCE - 1`, `GlobalLoggingFilter` is `HIGHEST_PRECEDENCE`, and `JwtAuthenticationWebFilter` is `HIGHEST_PRECEDENCE + 10`. The gaps are deliberate — they read as "request id, then logging, then auth, with room to insert filters in between without renumbering everything."
-- **`.contextWrite(ctx -> ctx.put("requestId", requestId))`** puts the id into the *Reactor* `Context`, not just the HTTP header. Any operator further down the same reactive chain can retrieve it via `Mono.deferContextual(ctx -> ...)` even though it never touches the `ServerWebExchange` directly — this is the same pattern `util/ReactiveLogger` in the info service uses to bridge Reactor `Context` into SLF4J `MDC` (see the [Module 2 breakdown](#module-2-spring-reactive-service-info) in §6).
+- **[`@Order`][Order] arithmetic as documentation.** `RequestIdWebFilter` is `HIGHEST_PRECEDENCE - 1`, `GlobalLoggingFilter` is `HIGHEST_PRECEDENCE`, and `JwtAuthenticationWebFilter` is `HIGHEST_PRECEDENCE + 10`. The gaps are deliberate — they read as "request id, then logging, then auth, with room to insert filters in between without renumbering everything."
+- **`.contextWrite(ctx -> ctx.put("requestId", requestId))`** puts the id into the *Reactor* [`Context`][Context], not just the HTTP header. Any operator further down the same reactive chain can retrieve it via [`Mono.deferContextual(ctx -> ...)`][Mono] even though it never touches the [`ServerWebExchange`][ServerWebExchange] directly — this is the same pattern `util/ReactiveLogger` in the info service uses to bridge Reactor `Context` into SLF4J `MDC` (see the [Module 2 breakdown](#module-2-spring-reactive-service-info) in §6).
 
 </ul>
 
@@ -1208,7 +1208,7 @@ resilience4j:
 
 ### <span style="color:hsl(147,80%,58%)">Why Reactive MongoDB</span>
 
-Spring Data MongoDB's standard `MongoRepository` uses the blocking MongoDB Java driver. Every `findAll()` call blocks a thread until documents return. Spring Data Reactive MongoDB uses the MongoDB Reactive Streams driver, returning `Mono<T>` and `Flux<T>` — fully non-blocking all the way to the MongoDB wire protocol.
+Spring Data MongoDB's standard [`MongoRepository`][MongoRepository] uses the blocking MongoDB Java driver. Every `findAll()` call blocks a thread until documents return. Spring Data Reactive MongoDB uses the MongoDB Reactive Streams driver, returning [`Mono<T>`][Mono] and [`Flux<T>`][Flux] — fully non-blocking all the way to the MongoDB wire protocol.
 
 ```java
 // Blocking — holds a thread for the entire DB round-trip
@@ -1246,7 +1246,7 @@ doc.getMovieInfoId() // WRONG — records do not generate JavaBean getters
 
 ### <span style="color:hsl(62,80%,50%)">MongoDB Field Projections — a CQRS-Lite Read Model</span>
 
-The info service's `MovieInfoProjectionRepository` demonstrates returning a slim projection instead of the full document, using `@Query`'s `fields` attribute:
+The info service's `MovieInfoProjectionRepository` demonstrates returning a slim projection instead of the full document, using [`@Query`][Query]'s `fields` attribute:
 
 ```java
 @Query(value = "{}", fields = "{ 'movieInfoId': 1, 'name': 1, 'year': 1 }")
@@ -1257,7 +1257,7 @@ Spring Data MongoDB restricts the fields fetched from the wire *and* automatical
 
 ### <span style="color:hsl(199,80%,58%)">Why R2DBC Instead of Blocking JDBC</span>
 
-`spring-reactive-service-r2dbc` swaps MongoDB for PostgreSQL to show the same non-blocking principle applied to a relational database. R2DBC (**R**eactive **R**elational **D**ata**b**ase **C**onnectivity) is a separate driver-level SPI from JDBC — JDBC's `Connection`/`Statement`/`ResultSet` API is fundamentally blocking (`executeQuery()` blocks the calling thread until the database responds), so it cannot be wrapped to become non-blocking without defeating the purpose. R2DBC instead models a query result as a `Publisher<Row>`, so `r2dbc-postgresql` can deliver rows to a `Flux<Genre>` as they stream off the socket, without ever parking a thread.
+`spring-reactive-service-r2dbc` swaps MongoDB for PostgreSQL to show the same non-blocking principle applied to a relational database. R2DBC (**R**eactive **R**elational **D**ata**b**ase **C**onnectivity) is a separate driver-level SPI from JDBC — JDBC's [`Connection`][Connection]/[`Statement`][Statement]/[`ResultSet`][ResultSet] API is fundamentally blocking (`executeQuery()` blocks the calling thread until the database responds), so it cannot be wrapped to become non-blocking without defeating the purpose. R2DBC instead models a query result as a [`Publisher<Row>`][Publisher], so `r2dbc-postgresql` can deliver rows to a [`Flux<Genre>`][Flux] as they stream off the socket, without ever parking a thread.
 
 ```java
 public interface GenreRepository extends ReactiveCrudRepository<Genre, Long> {
@@ -1270,7 +1270,7 @@ public interface GenreRepository extends ReactiveCrudRepository<Genre, Long> {
 
 ### <span style="color:hsl(337,80%,58%)">Reactive Transactions Without a ThreadLocal Connection</span>
 
-Traditional Spring `@Transactional` works by binding the JDBC `Connection` to the current thread via `TransactionSynchronizationManager` (a `ThreadLocal`). That model breaks the instant a reactive pipeline hops schedulers — there is no guarantee the code that commits the transaction runs on the same thread that opened it. Spring's reactive transaction management solves this by threading the transaction state through the **Reactor `Context`** instead of a `ThreadLocal`, exposed to application code as `TransactionalOperator`:
+Traditional Spring [`@Transactional`][Transactional] works by binding the JDBC [`Connection`][Connection] to the current thread via [`TransactionSynchronizationManager`][TransactionSynchronizationManager] (a [`ThreadLocal`][ThreadLocal]). That model breaks the instant a reactive pipeline hops schedulers — there is no guarantee the code that commits the transaction runs on the same thread that opened it. Spring's reactive transaction management solves this by threading the transaction state through the **Reactor [`Context`][Context]** instead of a `ThreadLocal`, exposed to application code as [`TransactionalOperator`][TransactionalOperator]:
 
 ```java
 public Mono<Genre> create(Genre genre) {
@@ -1295,7 +1295,7 @@ Because the transaction context rides along in `Context` rather than a thread, `
 
 ### <span style="color:hsl(252,80%,58%)">Cache-Aside, Non-Blocking End to End</span>
 
-`spring-reactive-service-info` includes a `MovieInfoCacheService` that implements the classic **cache-aside** (lazy-loading) pattern, entirely with non-blocking operators via `ReactiveRedisTemplate`. It is a self-contained, independently testable component — as shipped, `MovieInfoController`/`MovieInfoServiceImpl` do not call it, so reads currently always go straight to MongoDB. Read the implementation as a template for *how* to front a reactive repository with Redis, not as evidence that the info service's live GET path is currently cached.
+`spring-reactive-service-info` includes a `MovieInfoCacheService` that implements the classic **cache-aside** (lazy-loading) pattern, entirely with non-blocking operators via [`ReactiveRedisTemplate`][ReactiveRedisTemplate]. It is a self-contained, independently testable component — as shipped, `MovieInfoController`/`MovieInfoServiceImpl` do not call it, so reads currently always go straight to MongoDB. Read the implementation as a template for *how* to front a reactive repository with Redis, not as evidence that the info service's live GET path is currently cached.
 
 ```java
 public Mono<MovieInfoDocument> getOrLoad(String id, Mono<MovieInfoDocument> loader) {
@@ -1326,11 +1326,11 @@ sequenceDiagram
     end
 ```
 
-The whole path — cache read, DB fallback, cache write — is one composed `Mono` chain. `switchIfEmpty` is doing the cache-miss branching: `redisTemplate.opsForValue().get(key)` emits an empty `Mono` (not `null`) on a miss, and `switchIfEmpty` only subscribes to the `loader` publisher in that case, exactly mirroring `Optional`-style fallback logic but fully asynchronously.
+The whole path — cache read, DB fallback, cache write — is one composed [`Mono`][Mono] chain. `switchIfEmpty` is doing the cache-miss branching: `redisTemplate.opsForValue().get(key)` emits an empty `Mono` (not `null`) on a miss, and `switchIfEmpty` only subscribes to the `loader` publisher in that case, exactly mirroring [`Optional`][Optional]-style fallback logic but fully asynchronously.
 
 ### <span style="color:hsl(29,80%,58%)">Serialization Detail: Records and `LocalDate`</span>
 
-`ReactiveRedisConfig` configures a `Jackson2JsonRedisSerializer` with an explicit `JavaTimeModule` registered on the `ObjectMapper`:
+`ReactiveRedisConfig` configures a [`Jackson2JsonRedisSerializer`][Jackson2JsonRedisSerializer] with an explicit [`JavaTimeModule`][JavaTimeModule] registered on the [`ObjectMapper`][ObjectMapper]:
 
 ```java
 ObjectMapper mapper = new ObjectMapper()
@@ -1338,11 +1338,11 @@ ObjectMapper mapper = new ObjectMapper()
         .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 ```
 
-Without `JavaTimeModule`, Jackson cannot serialize `MovieInfoDocument.releaseDate` (a `LocalDate`) and either throws or silently writes a numeric epoch array — disabling `WRITE_DATES_AS_TIMESTAMPS` keeps the cached JSON human-readable (`"2008-07-18"` instead of `[2008,7,18]`), which matters if the cache is ever inspected directly with `redis-cli`.
+Without `JavaTimeModule`, Jackson cannot serialize `MovieInfoDocument.releaseDate` (a [`LocalDate`][LocalDate]) and either throws or silently writes a numeric epoch array — disabling `WRITE_DATES_AS_TIMESTAMPS` keeps the cached JSON human-readable (`"2008-07-18"` instead of `[2008,7,18]`), which matters if the cache is ever inspected directly with `redis-cli`.
 
 ### <span style="color:hsl(167,80%,58%)">TTL and Eviction</span>
 
-Cached entries expire automatically after a 10-minute TTL (`Duration.ofMinutes(10)` passed to `set(key, doc, TTL)`), and `MovieInfoCacheService.evict(id)` allows explicit invalidation (e.g., after an update or delete) so stale data is never served past a write. `getAll()` is explicitly documented in the code as **demo-only** — it uses the Redis `KEYS` command to pattern-scan the keyspace, which is O(N) and blocks the single-threaded Redis server while it runs; production code should use `SCAN` (cursor-based, non-blocking on the server) instead.
+Cached entries expire automatically after a 10-minute TTL ([`Duration.ofMinutes(10)`][Duration] passed to `set(key, doc, TTL)`), and `MovieInfoCacheService.evict(id)` allows explicit invalidation (e.g., after an update or delete) so stale data is never served past a write. `getAll()` is explicitly documented in the code as **demo-only** — it uses the Redis `KEYS` command to pattern-scan the keyspace, which is O(N) and blocks the single-threaded Redis server while it runs; production code should use `SCAN` (cursor-based, non-blocking on the server) instead.
 
 ---
 
@@ -1372,7 +1372,7 @@ public record OutboxEvent(
 }
 ```
 
-A separate relay, `OutboxService.relayPendingEvents()`, runs on a fixed schedule (`@Scheduled(fixedDelay = 5000)`), queries for `PENDING` events, "publishes" them (a log line stands in for a real broker call in this learning project), and flips their status to `SENT`:
+A separate relay, `OutboxService.relayPendingEvents()`, runs on a fixed schedule ([`@Scheduled(fixedDelay = 5000)`][Scheduled]), queries for `PENDING` events, "publishes" them (a log line stands in for a real broker call in this learning project), and flips their status to `SENT`:
 
 ```mermaid
 sequenceDiagram
@@ -1406,7 +1406,7 @@ Both SSE and WebSocket keep a connection open without occupying a thread per con
 
 ### <span style="color:hsl(49,80%,50%)">`MovieInfoWebSocketHandler` — Broadcast Chat-Style Fan-Out</span>
 
-The info service implements `WebSocketHandler` directly (not through STOMP or `@MessageMapping`) to keep the reactive plumbing visible:
+The info service implements [`WebSocketHandler`][WebSocketHandler] directly (not through STOMP or [`@MessageMapping`][MessageMapping]) to keep the reactive plumbing visible:
 
 ```java
 @Component
@@ -1441,9 +1441,9 @@ flowchart LR
 
 Every connected session shares one `messageSink`. When any client sends a message, `handle()`'s `receive` pipeline calls `messageSink.tryEmitNext(...)`, and *every* session's `send` pipeline (each subscribed to `messageSink.asFlux()`) re-emits it — including back to the sender. This is the same "shared hot publisher" idea used for SSE ([§10](#10-server-sent-events-and-sinks)), applied to a bidirectional protocol.
 
-**Why `Mono.zip(receive, send).then()`:** `handle()` must return a single `Mono<Void>` that stays subscribed for the lifetime of the session. `receive` and `send` are two independent, concurrently-running pipelines — reading incoming frames and writing outgoing frames respectively — and neither should complete before the other. `Mono.zip` runs both and completes only once both complete (or cancels both the moment either errors or the session closes), which is exactly the lifecycle a WebSocket session needs.
+**Why [`Mono.zip(receive, send).then()`][Mono]:** `handle()` must return a single `Mono<Void>` that stays subscribed for the lifetime of the session. `receive` and `send` are two independent, concurrently-running pipelines — reading incoming frames and writing outgoing frames respectively — and neither should complete before the other. `Mono.zip` runs both and completes only once both complete (or cancels both the moment either errors or the session closes), which is exactly the lifecycle a WebSocket session needs.
 
-`WebSocketConfig` wires the handler to a URL with a `SimpleUrlHandlerMapping` at `Ordered.HIGHEST_PRECEDENCE`, ensuring the WebSocket upgrade handshake on `/ws/movieInfo` is matched before the standard `DispatcherHandler` request mapping would otherwise try (and fail) to route it as a normal HTTP request.
+`WebSocketConfig` wires the handler to a URL with a [`SimpleUrlHandlerMapping`][SimpleUrlHandlerMapping] at [`Ordered.HIGHEST_PRECEDENCE`][Ordered], ensuring the WebSocket upgrade handshake on `/ws/movieInfo` is matched before the standard [`DispatcherHandler`][DispatcherHandler] request mapping would otherwise try (and fail) to route it as a normal HTTP request.
 
 ---
 
@@ -1452,14 +1452,14 @@ Every connected session shares one `messageSink`. When any client sends a messag
 
 ### <span style="color:hsl(324,80%,58%)">Bean Validation (`@RestController` style)</span>
 
-The info service uses standard JSR-380 annotations on record fields and `@Valid` on the controller parameter:
+The info service uses standard JSR-380 annotations on record fields and [`@Valid`][Valid] on the controller parameter:
 
 ```java
 @PostMapping("/v1/movieInfo")
 Mono<MovieInfoDocument> createMovieInfo(@RequestBody @Valid MovieInfoDocument doc);
 ```
 
-When validation fails, Spring WebFlux throws `WebExchangeBindException`. The `GlobalExceptionHandler` catches it:
+When validation fails, Spring WebFlux throws [`WebExchangeBindException`][WebExchangeBindException]. The `GlobalExceptionHandler` catches it:
 
 ```java
 @ExceptionHandler(WebExchangeBindException.class)
@@ -1474,7 +1474,7 @@ public ResponseEntity<String> handleRequestBodyError(WebExchangeBindException ex
 
 ### <span style="color:hsl(102,80%,58%)">Manual Validation (Functional Router style)</span>
 
-The review service cannot use `@Valid` on `bodyToMono()` — it is not triggered automatically in functional routing. A `ReviewValidator` component is called via `.doOnNext()`:
+The review service cannot use [`@Valid`][Valid] on `bodyToMono()` — it is not triggered automatically in functional routing. A `ReviewValidator` component is called via `.doOnNext()`:
 
 ```java
 .doOnNext(reviewValidator::validate)  // throws ReviewDataException if invalid
@@ -1482,7 +1482,7 @@ The review service cannot use `@Valid` on `bodyToMono()` — it is not triggered
 
 ### <span style="color:hsl(239,80%,58%)">Error Propagation in Reactive Pipelines</span>
 
-Errors in reactive pipelines propagate as signals, not exceptions. When any operator throws or calls `Mono.error(...)`, the error signal travels downstream through the pipeline, skipping all `onNext` handlers, until it reaches an `onError` handler or the subscriber's error terminal.
+Errors in reactive pipelines propagate as signals, not exceptions. When any operator throws or calls [`Mono.error(...)`][Mono], the error signal travels downstream through the pipeline, skipping all `onNext` handlers, until it reaches an `onError` handler or the subscriber's error terminal.
 
 ```java
 repository.findById(id)
@@ -1509,7 +1509,7 @@ void testFluxConcatMap() {
 }
 ```
 
-`StepVerifier` is the reactive assertion DSL. It subscribes to the publisher and verifies: items in order, error type, completion signal. `withVirtualTime` simulates time for `delayElements` without actual sleeping.
+[`StepVerifier`][StepVerifier] is the reactive assertion DSL. It subscribes to the publisher and verifies: items in order, error type, completion signal. `withVirtualTime` simulates time for `delayElements` without actual sleeping.
 
 ### <span style="color:hsl(292,80%,58%)">Layer 2: Controller Unit Tests (`@WebFluxTest`)</span>
 
@@ -1532,7 +1532,7 @@ class MovieInfoControllerTest {
 }
 ```
 
-`@WebFluxTest` loads only the WebFlux slice — no database, no full Spring context. `MovieInfoService` is mocked. Tests verify HTTP contract: status codes, response bodies, content types, headers.
+[`@WebFluxTest`][WebFluxTest] loads only the WebFlux slice — no database, no full Spring context. `MovieInfoService` is mocked. Tests verify HTTP contract: status codes, response bodies, content types, headers.
 
 ### <span style="color:hsl(69,80%,50%)">Layer 3: Integration Tests (`@SpringBootTest` + Testcontainers)</span>
 
@@ -1554,7 +1554,7 @@ class MovieInfoControllerInt {
 }
 ```
 
-`@ServiceConnection` automatically configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB. No hardcoded ports in config files needed. The test uses a named database (`movieinfotest`) configured in `src/test/resources/application.yml` to avoid touching the production `local` database.
+[`@ServiceConnection`][ServiceConnection] automatically configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB. No hardcoded ports in config files needed. The test uses a named database (`movieinfotest`) configured in `src/test/resources/application.yml` to avoid touching the production `local` database.
 
 **macOS Docker Desktop requirements** (configured in root `pom.xml` Surefire):
 
@@ -1595,20 +1595,20 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### <span style="color:hsl(259,80%,58%)">Movie Info Service (via Gateway)</span>
 
-| Method | Path                         | Description                                                                     | Body                       | Response                                                   |
-|--------|------------------------------|---------------------------------------------------------------------------------|----------------------------|------------------------------------------------------------|
-| POST   | `/v1/movieInfo`              | Create a movie info record                                                      | `MovieInfoDocument` JSON   | `201 Created`                                              |
-| GET    | `/v1/movieInfos`             | List all movies                                                                 | —                          | `200 OK` array                                             |
-| GET    | `/v1/movieInfos?year=2023`   | Filter by release year                                                          | —                          | `200 OK` filtered                                          |
-| GET    | `/v1/movieInfos?name=Batman` | Filter by name                                                                  | —                          | `200 OK` filtered                                          |
-| GET    | `/v1/movieInfo/{id}`         | Get one movie by ID                                                             | —                          | `200 OK` or `404`                                          |
-| PUT    | `/v1/movieInfo/{id}`         | Upsert movie by ID                                                              | `MovieInfoDocument` JSON   | `200 OK`                                                   |
-| DELETE | `/v1/movieInfo/{id}`         | Delete movie by ID                                                              | —                          | `204 No Content`                                           |
-| GET    | `/v1/movieInfo/stream`       | SSE — all movie info events, replayed from the start                            | —                          | `text/event-stream` (`ServerSentEvent<MovieInfoDocument>`) |
-| GET    | `/v1/movieInfo/tailable`     | Real-time stream of new inserts via MongoDB tailable cursor (capped collection) | —                          | `text/event-stream`                                        |
-| POST   | `/v1/movieInfo/batch`        | Streaming bulk insert — request body is consumed as a `Flux`                    | `MovieInfoDocument[]` JSON | `201 Created` array                                        |
-| GET    | `/v1/movieInfo/summary`      | List — `MovieSummary` projection (id/name/year only)                            | —                          | `200 OK` array                                             |
-| GET    | `/v1/movieInfo/{id}/summary` | Single — `MovieSummary` projection                                              | —                          | `200 OK` or empty                                          |
+| Method | Path                         | Description                                                                     | Body                       | Response                                                                      |
+|--------|------------------------------|---------------------------------------------------------------------------------|----------------------------|-------------------------------------------------------------------------------|
+| POST   | `/v1/movieInfo`              | Create a movie info record                                                      | `MovieInfoDocument` JSON   | `201 Created`                                                                 |
+| GET    | `/v1/movieInfos`             | List all movies                                                                 | —                          | `200 OK` array                                                                |
+| GET    | `/v1/movieInfos?year=2023`   | Filter by release year                                                          | —                          | `200 OK` filtered                                                             |
+| GET    | `/v1/movieInfos?name=Batman` | Filter by name                                                                  | —                          | `200 OK` filtered                                                             |
+| GET    | `/v1/movieInfo/{id}`         | Get one movie by ID                                                             | —                          | `200 OK` or `404`                                                             |
+| PUT    | `/v1/movieInfo/{id}`         | Upsert movie by ID                                                              | `MovieInfoDocument` JSON   | `200 OK`                                                                      |
+| DELETE | `/v1/movieInfo/{id}`         | Delete movie by ID                                                              | —                          | `204 No Content`                                                              |
+| GET    | `/v1/movieInfo/stream`       | SSE — all movie info events, replayed from the start                            | —                          | `text/event-stream` ([`ServerSentEvent<MovieInfoDocument>`][ServerSentEvent]) |
+| GET    | `/v1/movieInfo/tailable`     | Real-time stream of new inserts via MongoDB tailable cursor (capped collection) | —                          | `text/event-stream`                                                           |
+| POST   | `/v1/movieInfo/batch`        | Streaming bulk insert — request body is consumed as a [`Flux`][Flux]            | `MovieInfoDocument[]` JSON | `201 Created` array                                                           |
+| GET    | `/v1/movieInfo/summary`      | List — `MovieSummary` projection (id/name/year only)                            | —                          | `200 OK` array                                                                |
+| GET    | `/v1/movieInfo/{id}/summary` | Single — `MovieSummary` projection                                              | —                          | `200 OK` or empty                                                             |
 
 **Gateway routing note:** the gateway's dedicated YAML SSE route predicate is `Path=/v1/movieInfoStream` (no slash before "stream"), which does not actually match the real endpoint path `/v1/movieInfo/stream`. In practice, requests to `/v1/movieInfo/stream` are instead matched by the broader programmatic route (`/v1/movieInfo/**`) from `GatewayRoutesConfig`, which *does* attach a circuit breaker and retry filter — worth knowing if the "[§10](#10-server-sent-events-and-sinks) SSE has no circuit breaker" reasoning is being relied upon for this specific path. The same slash mismatch exists for the review service's `/v1/reviewsStream` YAML predicate vs. the real `/v1/reviews/stream` path.
 
@@ -1689,7 +1689,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
   "createdAt": "2026-01-01T12:00:00"
 }
 ```
-`id` and `createdAt` are server-generated — omit them (or send `null`) in `POST` bodies; `createdAt` is populated automatically by `@EnableR2dbcAuditing`.
+`id` and `createdAt` are server-generated — omit them (or send `null`) in `POST` bodies; `createdAt` is populated automatically by [`@EnableR2dbcAuditing`][EnableR2dbcAuditing].
 
 ---
 
@@ -1845,7 +1845,7 @@ WebFlux + Reactive MongoDB + WebClient form a fully non-blocking stack. No threa
 
 **3. Backpressure propagation**
 
-Slow consumers automatically slow producers. In a traditional `List<T>` pipeline, a huge result set is fully materialised in memory before processing. In a reactive pipeline, a slow subscriber signals `request(n)` upstream; the database cursor slows to match. Memory usage is bounded regardless of result set size.
+Slow consumers automatically slow producers. In a traditional [`List<T>`][List] pipeline, a huge result set is fully materialised in memory before processing. In a reactive pipeline, a slow subscriber signals `request(n)` upstream; the database cursor slows to match. Memory usage is bounded regardless of result set size.
 
 **4. Stream composition**
 
@@ -1861,7 +1861,7 @@ Long-lived connections (SSE, WebSocket) hold no thread on the server. Thousands 
 
 **7. Natural fit for microservice fan-out**
 
-Calling three services in parallel and combining results is idiomatic with `Mono.zip`. In imperative code, this requires explicit `CompletableFuture` management, which is error-prone.
+Calling three services in parallel and combining results is idiomatic with [`Mono.zip`][Mono]. In imperative code, this requires explicit [`CompletableFuture`][CompletableFuture] management, which is error-prone.
 
 ### <span style="color:hsl(77,80%,58%)">Disadvantages</span>
 
@@ -1871,7 +1871,7 @@ The mental model shift from imperative to declarative is significant. Developers
 
 **2. Stack traces are nearly unreadable**
 
-An error in a reactive pipeline produces a stack trace full of Reactor internals (`FluxFlatMap`, `MonoSubscribeOn`, `OperatorSubscriber`) with little indication of which line of application code caused the problem. `Hooks.onOperatorDebug()` or `ReactorDebugAgent` help but add runtime overhead.
+An error in a reactive pipeline produces a stack trace full of Reactor internals ([`FluxFlatMap`][FluxFlatMap], [`MonoSubscribeOn`][MonoSubscribeOn], `OperatorSubscriber`) with little indication of which line of application code caused the problem. [`Hooks.onOperatorDebug()`][Hooks] or [`ReactorDebugAgent`][ReactorDebugAgent] help but add runtime overhead.
 
 **3. Debugging is hard**
 
@@ -1879,7 +1879,7 @@ You cannot step through a reactive pipeline with a traditional debugger the way 
 
 **4. Blocking code is toxic**
 
-One blocking call (`Thread.sleep`, blocking JDBC query, reading a `BlockingQueue`) on a Netty event-loop thread starves every other request sharing that thread. Mixing blocking and non-blocking code is a common and hard-to-diagnose mistake. The symptom is intermittent slow responses under load — not a clear error.
+One blocking call ([`Thread.sleep`][Thread], blocking JDBC query, reading a [`BlockingQueue`][BlockingQueue]) on a Netty event-loop thread starves every other request sharing that thread. Mixing blocking and non-blocking code is a common and hard-to-diagnose mistake. The symptom is intermittent slow responses under load — not a clear error.
 
 **5. Not appropriate for all workloads**
 
@@ -1893,15 +1893,15 @@ One blocking call (`Thread.sleep`, blocking JDBC query, reading a `BlockingQueue
 
 **6. Reactive-all-the-way requirement**
 
-Every I/O layer (database driver, HTTP client, messaging client) must have reactive support. If any layer is blocking, you must use `Schedulers.boundedElastic()` to offload it to a separate thread pool — partially defeating the purpose of going reactive in the first place.
+Every I/O layer (database driver, HTTP client, messaging client) must have reactive support. If any layer is blocking, you must use [`Schedulers.boundedElastic()`][Schedulers] to offload it to a separate thread pool — partially defeating the purpose of going reactive in the first place.
 
 **7. Testing is more complex**
 
-`StepVerifier`, `WebTestClient`, `Testcontainers`, `withVirtualTime` — testing reactive code is possible but requires learning a different set of tools. Testing time-dependent pipelines without `withVirtualTime` would require actual sleeping, making tests slow and flaky.
+[`StepVerifier`][StepVerifier], [`WebTestClient`][WebTestClient], `Testcontainers`, `withVirtualTime` — testing reactive code is possible but requires learning a different set of tools. Testing time-dependent pipelines without `withVirtualTime` would require actual sleeping, making tests slow and flaky.
 
 **8. Context propagation**
 
-Thread-local values (MDC logging context, Spring Security `SecurityContextHolder`, distributed tracing spans) do not propagate across reactive scheduler switches automatically. Reactor's `Context` / `contextWrite` must be used explicitly, which adds unfamiliar boilerplate.
+Thread-local values (MDC logging context, Spring Security [`SecurityContextHolder`][SecurityContextHolder], distributed tracing spans) do not propagate across reactive scheduler switches automatically. Reactor's [`Context`][Context] / `contextWrite` must be used explicitly, which adds unfamiliar boilerplate.
 
 ### <span style="color:hsl(214,80%,58%)">Summary Verdict</span>
 
@@ -1918,49 +1918,128 @@ Thread-local values (MDC logging context, Spring Security `SecurityContextHolder
 
 This project was built to cement specific reactive concepts through working code. The table below maps each concept to exactly where it lives in the codebase:
 
-| Concept                                                     | File / Location                                                                                  |
-|-------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| Raw Reactor operators (map, flatMap, concatMap, zip, merge) | `non-spring-reactive-reactor-core/src/main/java/`                                                |
-| `flatMap` vs `concatMap` ordering difference                | `FluxFlow.fluxFlatMapDelayPublisher()` vs `fluxConcatMapDelayPublisher()`                        |
-| Stream combination patterns                                 | `CombineMonoFlux.*` — all 10 operators                                                           |
-| Annotation-based WebFlux (`@RestController`)                | `spring-reactive-service-info/router/MovieInfoController.java`                                   |
-| Interface-based HTTP contract                               | `spring-reactive-service-info/api/MovieInfoApi.java`                                             |
-| Functional router/handler WebFlux                           | `spring-reactive-service-review/router/ReviewRouter.java` + `handler/ReviewHandler.java`         |
-| Hot publisher — `Sinks.replay().all()`                      | `MovieInfoController.movieInfoSinks`                                                             |
-| Hot publisher — `Sinks.replay().latest()`                   | `ReviewHandler.reviewInfoSinks`                                                                  |
-| SSE streaming endpoint                                      | `MovieInfoApi.getMovieInfoStream()`, `ReviewHandler.getReviewsStream()`                          |
-| Non-blocking WebClient with typed error handling            | `MovieInfoRestClient.java`, `ReviewRestClient.java`                                              |
-| Reactive fan-out aggregation (`flatMap` chain)              | `MoviesController.retrieveMovieById()`                                                           |
-| Retry with exponential backoff                              | `MovieInfoRestClient.retrieveMovieInfo()` `.retryWhen(...)`                                      |
-| Reactive MongoDB with Java records                          | `MovieInfoDocument.java`, `MovieInfoRepository.java`                                             |
-| `@RequestParam Map<String, String>` (not enum key)          | `MovieInfoApi.getAllMovieInfos()`                                                                |
-| Global exception handling                                   | `GlobalExceptionHandler.java` in each service                                                    |
-| Bean Validation in WebFlux                                  | `MovieInfoApi.createMovieInfo(@Valid ...)`                                                       |
-| Manual validation in functional router                      | `ReviewValidator.java`, `ReviewHandler.addReview()`                                              |
-| API Gateway programmatic routes + circuit breaker           | `spring-reactive-gateway/config/GatewayRoutesConfig.java`                                        |
-| API Gateway YAML routes + named filters                     | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
-| GlobalFilter with correlation ID                            | `spring-reactive-gateway/filter/GlobalLoggingFilter.java`                                        |
-| Named `GatewayFilterFactory` (pre-request enrichment)       | `spring-reactive-gateway/filter/PreFilterGatewayFilterFactory.java`                              |
-| Named `GatewayFilterFactory` (post-response timing)         | `spring-reactive-gateway/filter/PostFilterGatewayFilterFactory.java`                             |
-| Circuit breaker fallback controller                         | `spring-reactive-gateway/controller/FallbackController.java`                                     |
-| Resilience4j CB + time limiter configuration                | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
-| `httpclient` wiretap + connect/response timeout             | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
-| `StepVerifier` unit tests                                   | `FluxFlowTest.java`, `MonoFlowTest.java`, `CombineMonoFluxTest.java`                             |
-| `@WebFluxTest` controller slice tests                       | `MovieInfoControllerTest.java`, `ServerSentEventTest.java`                                       |
-| `@SpringBootTest` + Testcontainers                          | `MovieInfoControllerInt.java`, `ReviewInt.java`, `ReviewRepositoryInt.java`                      |
-| WireMock contract test                                      | `MoviesControllerWireMockInt.java`                                                               |
-| Actuator + Prometheus metrics                               | `application.yml` in each service + root `pom.xml`                                               |
-| Testcontainers macOS Docker Desktop fix                     | Root `pom.xml` Surefire `<argLine>` and `<environmentVariables>`                                 |
-| R2DBC reactive relational access                            | `spring-reactive-service-r2dbc/repository/GenreRepository.java`                                  |
-| Reactive transactions (`TransactionalOperator`)             | `spring-reactive-service-r2dbc/service/GenreService.java`                                        |
-| Reactive bulk insert (`saveAll(Flux<T>)`)                   | `GenreService.createBatch()`                                                                     |
-| MongoDB field projection (CQRS-lite read model)             | `spring-reactive-service-info/projection/MovieInfoProjectionRepository.java`                     |
-| Reactive cache-aside with Redis                             | `spring-reactive-service-info/cache/MovieInfoCacheService.java`                                  |
-| Transactional outbox pattern                                | `spring-reactive-service-info/outbox/OutboxService.java`, `OutboxEvent.java`                     |
-| Reactive WebSocket (bidirectional, shared sink)             | `spring-reactive-service-info/websocket/MovieInfoWebSocketHandler.java`                          |
-| Reactor `Context` → SLF4J `MDC` bridging                    | `spring-reactive-service-info/util/ReactiveLogger.java`                                          |
-| `WebFilter` request-id propagation via Reactor `Context`    | `spring-reactive-gateway/filter/RequestIdWebFilter.java`                                         |
-| JWT authentication at the gateway edge                      | `spring-reactive-gateway/filter/JwtAuthenticationWebFilter.java`, `TokenUtil.java`               |
-| Redis-backed distributed rate limiting                      | `spring-reactive-gateway/config/RateLimiterConfig.java` + `application.yml` `RequestRateLimiter` |
-| Canary / weighted routing                                   | `spring-reactive-gateway/src/main/resources/application.yml` — `Weight=movie-info-group` routes  |
-| Resilience4j bulkhead (semaphore + thread-pool)             | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
+| Concept                                                                       | File / Location                                                                                  |
+|-------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| Raw Reactor operators (map, flatMap, concatMap, zip, merge)                   | `non-spring-reactive-reactor-core/src/main/java/`                                                |
+| `flatMap` vs `concatMap` ordering difference                                  | `FluxFlow.fluxFlatMapDelayPublisher()` vs `fluxConcatMapDelayPublisher()`                        |
+| Stream combination patterns                                                   | `CombineMonoFlux.*` — all 10 operators                                                           |
+| Annotation-based WebFlux ([`@RestController`][RestController])                | `spring-reactive-service-info/router/MovieInfoController.java`                                   |
+| Interface-based HTTP contract                                                 | `spring-reactive-service-info/api/MovieInfoApi.java`                                             |
+| Functional router/handler WebFlux                                             | `spring-reactive-service-review/router/ReviewRouter.java` + `handler/ReviewHandler.java`         |
+| Hot publisher — [`Sinks.replay().all()`][Sinks]                               | `MovieInfoController.movieInfoSinks`                                                             |
+| Hot publisher — `Sinks.replay().latest()`                                     | `ReviewHandler.reviewInfoSinks`                                                                  |
+| SSE streaming endpoint                                                        | `MovieInfoApi.getMovieInfoStream()`, `ReviewHandler.getReviewsStream()`                          |
+| Non-blocking WebClient with typed error handling                              | `MovieInfoRestClient.java`, `ReviewRestClient.java`                                              |
+| Reactive fan-out aggregation (`flatMap` chain)                                | `MoviesController.retrieveMovieById()`                                                           |
+| Retry with exponential backoff                                                | `MovieInfoRestClient.retrieveMovieInfo()` `.retryWhen(...)`                                      |
+| Reactive MongoDB with Java records                                            | `MovieInfoDocument.java`, `MovieInfoRepository.java`                                             |
+| `@RequestParam Map<String, String>` (not enum key)                            | `MovieInfoApi.getAllMovieInfos()`                                                                |
+| Global exception handling                                                     | `GlobalExceptionHandler.java` in each service                                                    |
+| Bean Validation in WebFlux                                                    | `MovieInfoApi.createMovieInfo(@Valid ...)`                                                       |
+| Manual validation in functional router                                        | `ReviewValidator.java`, `ReviewHandler.addReview()`                                              |
+| API Gateway programmatic routes + circuit breaker                             | `spring-reactive-gateway/config/GatewayRoutesConfig.java`                                        |
+| API Gateway YAML routes + named filters                                       | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
+| GlobalFilter with correlation ID                                              | `spring-reactive-gateway/filter/GlobalLoggingFilter.java`                                        |
+| Named [`GatewayFilterFactory`][GatewayFilterFactory] (pre-request enrichment) | `spring-reactive-gateway/filter/PreFilterGatewayFilterFactory.java`                              |
+| Named `GatewayFilterFactory` (post-response timing)                           | `spring-reactive-gateway/filter/PostFilterGatewayFilterFactory.java`                             |
+| Circuit breaker fallback controller                                           | `spring-reactive-gateway/controller/FallbackController.java`                                     |
+| Resilience4j CB + time limiter configuration                                  | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
+| `httpclient` wiretap + connect/response timeout                               | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
+| [`StepVerifier`][StepVerifier] unit tests                                     | `FluxFlowTest.java`, `MonoFlowTest.java`, `CombineMonoFluxTest.java`                             |
+| [`@WebFluxTest`][WebFluxTest] controller slice tests                          | `MovieInfoControllerTest.java`, `ServerSentEventTest.java`                                       |
+| [`@SpringBootTest`][SpringBootTest] + Testcontainers                          | `MovieInfoControllerInt.java`, `ReviewInt.java`, `ReviewRepositoryInt.java`                      |
+| WireMock contract test                                                        | `MoviesControllerWireMockInt.java`                                                               |
+| Actuator + Prometheus metrics                                                 | `application.yml` in each service + root `pom.xml`                                               |
+| Testcontainers macOS Docker Desktop fix                                       | Root `pom.xml` Surefire `<argLine>` and `<environmentVariables>`                                 |
+| R2DBC reactive relational access                                              | `spring-reactive-service-r2dbc/repository/GenreRepository.java`                                  |
+| Reactive transactions ([`TransactionalOperator`][TransactionalOperator])      | `spring-reactive-service-r2dbc/service/GenreService.java`                                        |
+| Reactive bulk insert (`saveAll(Flux<T>)`)                                     | `GenreService.createBatch()`                                                                     |
+| MongoDB field projection (CQRS-lite read model)                               | `spring-reactive-service-info/projection/MovieInfoProjectionRepository.java`                     |
+| Reactive cache-aside with Redis                                               | `spring-reactive-service-info/cache/MovieInfoCacheService.java`                                  |
+| Transactional outbox pattern                                                  | `spring-reactive-service-info/outbox/OutboxService.java`, `OutboxEvent.java`                     |
+| Reactive WebSocket (bidirectional, shared sink)                               | `spring-reactive-service-info/websocket/MovieInfoWebSocketHandler.java`                          |
+| Reactor [`Context`][Context] → SLF4J `MDC` bridging                           | `spring-reactive-service-info/util/ReactiveLogger.java`                                          |
+| [`WebFilter`][WebFilter] request-id propagation via Reactor `Context`         | `spring-reactive-gateway/filter/RequestIdWebFilter.java`                                         |
+| JWT authentication at the gateway edge                                        | `spring-reactive-gateway/filter/JwtAuthenticationWebFilter.java`, `TokenUtil.java`               |
+| Redis-backed distributed rate limiting                                        | `spring-reactive-gateway/config/RateLimiterConfig.java` + `application.yml` `RequestRateLimiter` |
+| Canary / weighted routing                                                     | `spring-reactive-gateway/src/main/resources/application.yml` — `Weight=movie-info-group` routes  |
+| Resilience4j bulkhead (semaphore + thread-pool)                               | `spring-reactive-gateway/src/main/resources/application.yml`                                     |
+
+<!-- Library classes mentioned above, linked to their source at the versions this project builds with. -->
+
+[BlockingQueue]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/concurrent/BlockingQueue.java
+[CompletableFuture]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/concurrent/CompletableFuture.java
+[Connection]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.sql/share/classes/java/sql/Connection.java
+[Context]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/util/context/Context.java
+[Controller]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-context/src/main/java/org/springframework/stereotype/Controller.java
+[CreatedDate]: https://github.com/spring-projects/spring-data-commons/blob/4.1.1/src/main/java/org/springframework/data/annotation/CreatedDate.java
+[DispatcherHandler]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/DispatcherHandler.java
+[Document]: https://github.com/spring-projects/spring-data-mongodb/blob/5.1.1/spring-data-mongodb/src/main/java/org/springframework/data/mongodb/core/mapping/Document.java
+[Duration]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/time/Duration.java
+[EnableR2dbcAuditing]: https://github.com/spring-projects/spring-data-relational/blob/4.1.1/spring-data-r2dbc/src/main/java/org/springframework/data/r2dbc/config/EnableR2dbcAuditing.java
+[Flow]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/concurrent/Flow.java
+[Flux]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Flux.java
+[FluxFlatMap]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/FluxFlatMap.java
+[Function]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/function/Function.java
+[GatewayFilterChain]: https://github.com/spring-cloud/spring-cloud-gateway/blob/v5.0.3/spring-cloud-gateway-server-webflux/src/main/java/org/springframework/cloud/gateway/filter/GatewayFilterChain.java
+[GatewayFilterFactory]: https://github.com/spring-cloud/spring-cloud-gateway/blob/v5.0.3/spring-cloud-gateway-server-webflux/src/main/java/org/springframework/cloud/gateway/filter/factory/GatewayFilterFactory.java
+[GetMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/GetMapping.java
+[Hooks]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Hooks.java
+[Id]: https://github.com/spring-projects/spring-data-commons/blob/4.1.1/src/main/java/org/springframework/data/annotation/Id.java
+[Jackson2JsonRedisSerializer]: https://github.com/spring-projects/spring-data-redis/blob/4.1.1/src/main/java/org/springframework/data/redis/serializer/Jackson2JsonRedisSerializer.java
+[JavaTimeModule]: https://github.com/FasterXML/jackson-modules-java8/blob/jackson-modules-java8-2.21.5/datetime/src/main/java/com/fasterxml/jackson/datatype/jsr310/JavaTimeModule.java
+[List]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/List.java
+[LocalDate]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/time/LocalDate.java
+[Map]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/Map.java
+[MessageMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-messaging/src/main/java/org/springframework/messaging/handler/annotation/MessageMapping.java
+[MockServerRequest]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-test/src/main/java/org/springframework/mock/web/reactive/function/server/MockServerRequest.java
+[MongoRepository]: https://github.com/spring-projects/spring-data-mongodb/blob/5.1.1/spring-data-mongodb/src/main/java/org/springframework/data/mongodb/repository/MongoRepository.java
+[Mono]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Mono.java
+[MonoSubscribeOn]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/MonoSubscribeOn.java
+[ObjectMapper]: https://github.com/FasterXML/jackson-databind/blob/jackson-databind-2.21.5/src/main/java/com/fasterxml/jackson/databind/ObjectMapper.java
+[Optional]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/Optional.java
+[Order]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-core/src/main/java/org/springframework/core/annotation/Order.java
+[Ordered]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-core/src/main/java/org/springframework/core/Ordered.java
+[PathVariable]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/PathVariable.java
+[Publisher]: https://github.com/reactive-streams/reactive-streams-jvm/blob/v1.0.4/api/src/main/java/org/reactivestreams/Publisher.java
+[Query]: https://github.com/spring-projects/spring-data-mongodb/blob/5.1.1/spring-data-mongodb/src/main/java/org/springframework/data/mongodb/repository/Query.java
+[Query (org.springframework.data.r2dbc.repository)]: https://github.com/spring-projects/spring-data-relational/blob/4.1.1/spring-data-r2dbc/src/main/java/org/springframework/data/r2dbc/repository/Query.java
+[ReactiveRedisTemplate]: https://github.com/spring-projects/spring-data-redis/blob/4.1.1/src/main/java/org/springframework/data/redis/core/ReactiveRedisTemplate.java
+[ReactorDebugAgent]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-tools/src/main/java/reactor/tools/agent/ReactorDebugAgent.java
+[RequestBody]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RequestBody.java
+[RequestMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RequestMapping.java
+[RestController]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RestController.java
+[RestTemplate]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/client/RestTemplate.java
+[ResultSet]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.sql/share/classes/java/sql/ResultSet.java
+[RouterFunction]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/RouterFunction.java
+[Scheduled]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-context/src/main/java/org/springframework/scheduling/annotation/Scheduled.java
+[Schedulers]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/scheduler/Schedulers.java
+[SecurityContextHolder]: https://github.com/spring-projects/spring-security/blob/7.1.1/core/src/main/java/org/springframework/security/core/context/SecurityContextHolder.java
+[ServerHttpRequest]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/http/server/reactive/ServerHttpRequest.java
+[ServerRequest]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/ServerRequest.java
+[ServerSentEvent]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/http/codec/ServerSentEvent.java
+[ServerWebExchange]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/server/ServerWebExchange.java
+[Service]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-context/src/main/java/org/springframework/stereotype/Service.java
+[ServiceConnection]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-testcontainers/src/main/java/org/springframework/boot/testcontainers/service/connection/ServiceConnection.java
+[SimpleUrlHandlerMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/handler/SimpleUrlHandlerMapping.java
+[Sinks]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Sinks.java
+[SpringBootTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-test/src/main/java/org/springframework/boot/test/context/SpringBootTest.java
+[Statement]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.sql/share/classes/java/sql/Statement.java
+[StepVerifier]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-test/src/main/java/reactor/test/StepVerifier.java
+[String]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/String.java
+[Table]: https://github.com/spring-projects/spring-data-relational/blob/4.1.1/spring-data-relational/src/main/java/org/springframework/data/relational/core/mapping/Table.java
+[Tailable]: https://github.com/spring-projects/spring-data-mongodb/blob/5.1.1/spring-data-mongodb/src/main/java/org/springframework/data/mongodb/repository/Tailable.java
+[Thread]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/Thread.java
+[ThreadLocal]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/ThreadLocal.java
+[Transactional]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-tx/src/main/java/org/springframework/transaction/annotation/Transactional.java
+[TransactionalOperator]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-tx/src/main/java/org/springframework/transaction/reactive/TransactionalOperator.java
+[TransactionSynchronizationManager]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-tx/src/main/java/org/springframework/transaction/reactive/TransactionSynchronizationManager.java
+[Valid]: https://github.com/jakartaee/validation/blob/3.1.1/src/main/java/jakarta/validation/Valid.java
+[Value]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-beans/src/main/java/org/springframework/beans/factory/annotation/Value.java
+[WebClient]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/client/WebClient.java
+[WebClientResponseException]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/client/WebClientResponseException.java
+[WebExchangeBindException]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/support/WebExchangeBindException.java
+[WebFilter]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/server/WebFilter.java
+[WebFluxTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/module/spring-boot-webflux-test/src/main/java/org/springframework/boot/webflux/test/autoconfigure/WebFluxTest.java
+[WebSocketHandler]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/socket/WebSocketHandler.java
+[WebTestClient]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-test/src/main/java/org/springframework/test/web/reactive/server/WebTestClient.java
