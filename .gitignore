@@ -42,3 +42,6 @@ target/
 
 ### Claude Code agent worktrees ###
 .claude/worktrees/
+
+### Stray jar contents (a Testcontainers jar was once unpacked into the repo root) ###
+/META-INF/
