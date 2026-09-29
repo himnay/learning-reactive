@@ -255,7 +255,7 @@ This module inherits shared dependency management from the root `learning-reacti
 [RestController]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RestController.java
 [RestControllerAdvice]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RestControllerAdvice.java
 [RouterFunction]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/RouterFunction.java
-[RuntimeException]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/RuntimeException.java
+[RuntimeException]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/lang/RuntimeException.java
 [ServerRequest]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/ServerRequest.java
 [ServerResponse]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/ServerResponse.java
 [ServerWebExchange]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/server/ServerWebExchange.java

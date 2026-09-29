@@ -308,7 +308,7 @@ flowchart TB
 
     subgraph GW["spring-reactive-gateway — port 8765"]
         direction TB
-        RIF["RequestIdWebFilter<br/>(HIGHEST_PRECEDENCE − 1)"]
+        RIF["RequestIdWebFilter<br/>(HIGHEST_PRECEDENCE + 1)"]
         JWT["JwtAuthenticationWebFilter<br/>(HIGHEST_PRECEDENCE + 10)"]
         GLF["GlobalLoggingFilter<br/>(HIGHEST_PRECEDENCE)<br/>X-Correlation-Id in/out"]
         RL["RequestRateLimiter<br/>(Redis token bucket,<br/>per-user via X-User-Id)"]
@@ -323,7 +323,7 @@ flowchart TB
     CB --> Info["spring-reactive-service-info<br/>:8080 — @RestController<br/>MongoDB · Redis cache · Outbox · WebSocket"]
     CB --> Review["spring-reactive-service-review<br/>:8081 — RouterFunction/Handler<br/>MongoDB"]
     CB --> Movies["spring-reactive-service-movies<br/>:8082 — WebClient fan-out<br/>no database"]
-    CB --> R2dbc["spring-reactive-service-r2dbc<br/>:8083 — R2DBC<br/>PostgreSQL"]
+    Client -->|"direct, no gateway route"| R2dbc["spring-reactive-service-r2dbc<br/>:8083 — R2DBC<br/>PostgreSQL"]
 
     Movies -.->|WebClient GET| Info
     Movies -.->|WebClient GET| Review
@@ -334,7 +334,7 @@ flowchart TB
     R2dbc --> Postgres[("PostgreSQL :5432")]
 ```
 
-**Filter ordering on the gateway matters.** `RequestIdWebFilter` runs first so every downstream filter and log line can reference a stable request id. `JwtAuthenticationWebFilter` runs next (skipping `/actuator/**`, `/fallback/**`, `/v1/public/**`) and, on success, injects `X-User-Id` — which `RateLimiterConfig`'s `userKeyResolver` then uses to bucket rate limits per authenticated user rather than per IP. `GlobalLoggingFilter` wraps the remaining chain to log the full request/response cycle with timing.
+**Filter ordering on the gateway matters.** `RequestIdWebFilter` runs first so every downstream filter and log line can reference a stable request id. `JwtAuthenticationWebFilter` runs next: it drops any `X-User-Id` the client sent, then (skipping `/actuator/**`, `/fallback/**`, `/v1/public/**`) validates the token and, on success, injects `X-User-Id` — which `RateLimiterConfig`'s `userKeyResolver` then uses to bucket rate limits per authenticated user rather than per IP. `GlobalLoggingFilter` wraps the remaining chain to log the full request/response cycle with timing.
 
 ### <span style="color:hsl(59,80%,50%)">Request Flow Through the Gateway</span>
 
@@ -354,13 +354,13 @@ sequenceDiagram
     Note over GW: JwtAuthenticationWebFilter validates Bearer token
     Note over GW: GlobalLoggingFilter stamps X-Correlation-Id, logs →
     GW->>GW: Route match "movies-service" (/v1/movies/**)<br/>CircuitBreaker state = CLOSED
-    GW->>MV: forward GET /v1/movies/abc123
+    GW->>MV: forward GET /v1/movies/42
     par non-blocking fan-out
-        MV->>INFO: WebClient GET /v1/movieInfo/abc123
+        MV->>INFO: WebClient GET /v1/movieInfo/42
         INFO->>INFO: reactive Mongo find (non-blocking driver)
         INFO-->>MV: 200 MovieInfo JSON
     and
-        MV->>REV: WebClient GET /v1/reviews?movieInfoId=abc123
+        MV->>REV: WebClient GET /v1/reviews?movieInfoId=42
         REV->>REV: reactive Mongo find (non-blocking driver)
         REV-->>MV: 200 Review[] JSON
     end
@@ -570,7 +570,7 @@ All client applications should target `http://localhost:8765` instead of individ
 
 | Order                     | Filter                                                                            | Responsibility                                                                                                                                                                                                                                               |
 |---------------------------|-----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `HIGHEST_PRECEDENCE − 1`  | `RequestIdWebFilter`                                                              | Honours an inbound `X-Request-Id` or mints a UUID; writes it into Reactor [`Context`][Context] for downstream operators, not just the header                                                                                                                 |
+| `HIGHEST_PRECEDENCE + 1`  | `RequestIdWebFilter`                                                              | Honours an inbound `X-Request-Id` or mints a UUID; writes it into Reactor [`Context`][Context] for downstream operators, not just the header                                                                                                                 |
 | `HIGHEST_PRECEDENCE`      | `GlobalLoggingFilter`                                                             | Generates/propagates `X-Correlation-Id`; logs `→`/`←` request and response lines with timing                                                                                                                                                                 |
 | `HIGHEST_PRECEDENCE + 10` | `JwtAuthenticationWebFilter`                                                      | Validates the `Bearer` JWT (via `jjwt`) on every path except `/actuator/**`, `/fallback/**`, `/v1/public/**`; injects `X-User-Id` from the token's subject claim so downstream services trust the caller identity without re-validating the token themselves |
 | route-level               | `RequestRateLimiter` (default-filter, all routes)                                 | Redis-backed token bucket (`replenishRate: 10`, `burstCapacity: 20`) keyed by `userKeyResolver` — prefers `X-User-Id` (set by the JWT filter) and falls back to the caller's remote IP for public/unauthenticated routes                                     |
@@ -591,7 +591,7 @@ public KeyResolver userKeyResolver() {
 ```
 Because JWT validation runs before rate limiting in the filter chain, authenticated callers get a stable per-user bucket instead of sharing a bucket by IP (which would unfairly throttle everyone behind the same NAT/proxy).
 
-**Canary / weighted routing:** `application.yml` defines two routes sharing a `Weight` group — 80% of `/v1/movieInfo/**` traffic stays on the stable route (port 8080) and 20% is routed to a canary v2 instance (port 8083) with an `X-Canary: true` header added, letting a new version absorb a fraction of production traffic without a separate gateway deployment.
+**Canary / weighted routing:** the opt-in `canary` profile of `application.yml` defines two routes sharing a `Weight` group — 80% of `/v1/movieInfo/**` traffic stays on the stable route (port 8080) and 20% is routed to a canary v2 instance (`services.info-url-v2`, port 8090 by default) with an `X-Canary: true` header added, letting a new version absorb a fraction of production traffic without a separate gateway deployment.
 
 ---
 
@@ -601,7 +601,7 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 | Technology                   | Version                      | Role                                                                                                                 |
 |------------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------|
 | Java                         | 25                           | Runtime — records, sealed types, pattern matching                                                                    |
-| Spring Boot                  | 4.1.1                        | Auto-configuration, embedded Netty, Actuator (from the `super-pom` 1.1.3 parent, as of 2026)                         |
+| Spring Boot                  | 4.1.1                        | Auto-configuration, embedded Netty, Actuator (from the `super-pom` 1.2.0 parent, as of 2026)                         |
 | Spring Framework / WebFlux   | 7.0.9 (via Boot 4.1.1)       | Reactive web framework on Project Reactor                                                                            |
 | Project Reactor              | 3.8.7 (via Boot)             | Mono, Flux, Sinks, Schedulers                                                                                        |
 | Spring Cloud                 | 2025.1.3 (via learning-bom)  | BOM for `spring-cloud-starter-gateway-server-webflux` (5.0.3) and `spring-cloud-starter-circuitbreaker-reactor-resilience4j` |
@@ -837,9 +837,9 @@ public Mono<ServerResponse> getReviewsStream(ServerRequest request) {
 
 ### <span style="color:hsl(309,80%,58%)">Why SSE Routes Have No Circuit Breaker</span>
 
-SSE routes (`/v1/movieInfoStream`, `/v1/reviewsStream`) are in YAML without circuit breakers deliberately. A circuit breaker on a streaming connection would be wrong: once a long-lived SSE connection is established, interrupting it mid-stream would break the client's event processing state. Circuit breakers are designed for short request-response cycles, not persistent streams.
+SSE routes (`/v1/movieInfo/stream`, `/v1/reviews/stream`) are in YAML without circuit breakers deliberately. A circuit breaker on a streaming connection would be wrong: once a long-lived SSE connection is established, interrupting it mid-stream would break the client's event processing state. Circuit breakers are designed for short request-response cycles, not persistent streams.
 
-**In practice**, the YAML predicates for these two routes (`/v1/movieInfoStream`, `/v1/reviewsStream`) don't match the real endpoint paths (`/v1/movieInfo/stream`, `/v1/reviews/stream` — note the slash before "stream"). See the routing note in [§20](#20-api-reference) — as shipped, real SSE traffic actually falls through to the CB-guarded programmatic route, which is the opposite of the intent described above. Documented here as-is because [§20](#20-api-reference) is the API reference, and this section explains *why* the code is written the way it is, not that the wiring currently achieves it end-to-end.
+Both routes carry `order: -2`. The programmatic `/v1/movieInfo/**` and `/v1/reviews/**` routes (order 0) match the stream paths too, and between overlapping routes the lower order wins; without it the streams would fall through to the CB-guarded routes. `GatewayConfigurationTest` checks which route each path resolves to.
 
 ---
 
@@ -892,11 +892,15 @@ The gateway's Netty HTTP client is configured in `application.yml`:
 spring:
   cloud:
     gateway:
-      httpclient:
-        wiretap: true          # logs every byte at Netty wire level
-        connect-timeout: 1000  # ms — TCP handshake timeout to downstream
-        response-timeout: 5s   # total response timeout per forwarded request
+      server:
+        webflux:
+          httpclient:
+            wiretap: true          # logs every byte at Netty wire level
+            connect-timeout: 1000  # ms — TCP handshake timeout to downstream
+            response-timeout: 5s   # time until the downstream response starts; SSE bodies may idle longer
 ```
+
+Spring Cloud Gateway 5 (Spring Cloud 2025.1) reads its WebFlux server settings only under `spring.cloud.gateway.server.webflux`. The pre-4.3 keys directly under `spring.cloud.gateway` are silently ignored, which switches off every YAML route, default filter (including the rate limiter), CORS rule and timeout above.
 
 To see wiretap logs: set `logging.level.reactor.netty: DEBUG` in `application.yml`. This produces extremely verbose output — disable in production.
 
@@ -959,16 +963,19 @@ Use when: circuit breakers needed; typed retry config; route URIs come from [`@V
 spring:
   cloud:
     gateway:
-      routes:
-        - id: movie-info-sse
-          uri: ${services.info-url:http://localhost:8080}
-          predicates:
-            - Path=/v1/movieInfoStream
-          filters:
-            - name: PreFilter     # maps to PreFilterGatewayFilterFactory
-            - name: PostFilter    # maps to PostFilterGatewayFilterFactory
-            - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
+      server:
+        webflux:
+          routes:
+            - id: movie-info-sse
+              uri: ${services.info-url:http://localhost:8080}
+              order: -2              # ahead of the programmatic /v1/movieInfo/** route
+              predicates:
+                - Path=/v1/movieInfo/stream
+              filters:
+                - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
 ```
+
+The two custom factories are listed the same way by name (`- name: PreFilter` maps to `PreFilterGatewayFilterFactory`, `- name: PostFilter` to `PostFilterGatewayFilterFactory`); no route in `application.yml` uses them at the moment.
 
 Use when: simple header manipulation; routes may change per environment without recompile; named Java filter factories provide the logic.
 
@@ -1047,7 +1054,7 @@ Not every cross-cutting concern is expressed as a [`GatewayFilterFactory`][Gatew
 
 ```java
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE - 1)   // before GlobalLoggingFilter
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)   // before JwtAuthenticationWebFilter (+ 10)
 public class RequestIdWebFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String requestId = Optional.ofNullable(
@@ -1066,16 +1073,16 @@ Two details worth calling out:
 
 <ul>
 
-- **[`@Order`][Order] arithmetic as documentation.** `RequestIdWebFilter` is `HIGHEST_PRECEDENCE - 1`, `GlobalLoggingFilter` is `HIGHEST_PRECEDENCE`, and `JwtAuthenticationWebFilter` is `HIGHEST_PRECEDENCE + 10`. The gaps are deliberate — they read as "request id, then logging, then auth, with room to insert filters in between without renumbering everything."
+- **[`@Order`][Order] arithmetic as documentation.** `RequestIdWebFilter` is `HIGHEST_PRECEDENCE + 1` and `JwtAuthenticationWebFilter` is `HIGHEST_PRECEDENCE + 10`; the gap leaves room to insert filters without renumbering. It has to be `+ 1`, not `- 1`: `HIGHEST_PRECEDENCE` is `Integer.MIN_VALUE`, so `- 1` overflows to `Integer.MAX_VALUE` and runs the filter last. `GlobalLoggingFilter`'s `HIGHEST_PRECEDENCE` orders it among the gateway's `GlobalFilter`s, a separate chain that starts after all `WebFilter`s.
 - **`.contextWrite(ctx -> ctx.put("requestId", requestId))`** puts the id into the *Reactor* [`Context`][Context], not just the HTTP header. Any operator further down the same reactive chain can retrieve it via [`Mono.deferContextual(ctx -> ...)`][Mono] even though it never touches the [`ServerWebExchange`][ServerWebExchange] directly — this is the same pattern `util/ReactiveLogger` in the info service uses to bridge Reactor `Context` into SLF4J `MDC` (see the [Module 2 breakdown](#module-2-spring-reactive-service-info) in §6).
 
 </ul>
 
-`JwtAuthenticationWebFilter` validates the `Authorization: Bearer <token>` header for every path except `/actuator/**`, `/fallback/**`, and `/v1/public/**`. A missing/malformed header or an invalid/expired token short-circuits the chain with `401 Unauthorized` by calling `exchange.getResponse().setComplete()` directly — the request never reaches route matching, so it never counts toward a circuit breaker's failure rate. On success, the filter mutates the request to add `X-User-Id` (the JWT's subject claim) before calling `chain.filter(mutatedExchange)`, so every downstream filter and backend service can trust the caller's identity without re-parsing or re-validating the token.
+`JwtAuthenticationWebFilter` validates the `Authorization: Bearer <token>` header for every path except `/actuator/**`, `/fallback/**`, and `/v1/public/**`. Before anything else it removes any `X-User-Id` the client sent, public paths included, because the backends and the rate limiter trust that header. A missing/malformed header, an invalid/expired token or a token without a subject short-circuits the chain with `401 Unauthorized` by calling `exchange.getResponse().setComplete()` directly — the request never reaches route matching, so it never counts toward a circuit breaker's failure rate. On success, the filter mutates the request to add `X-User-Id` (the JWT's subject claim) before calling `chain.filter(mutatedExchange)`, so every downstream filter and backend service can trust the caller's identity without re-parsing or re-validating the token.
 
 #### <span style="color:hsl(127,80%,58%)">Redis-Backed Rate Limiting</span>
 
-`RequestRateLimiter` is applied as a `default-filter` in `application.yml`, so it runs for every route without being repeated per-route:
+`RequestRateLimiter` is applied as a `default-filter` in `application.yml` (under `spring.cloud.gateway.server.webflux`), so it runs for every route without being repeated per-route:
 
 ```yaml
 default-filters:
@@ -1091,7 +1098,7 @@ default-filters:
 
 This is the classic **token bucket** algorithm implemented with a Redis Lua script under the hood (`spring-boot-starter-data-redis-reactive` on the classpath, connecting to the `redis` service in `docker-compose.yml`): each key (resolved by `userKeyResolver`) gets a bucket that refills at `replenishRate` tokens/second up to a `burstCapacity` ceiling; each request costs `requestedTokens`. Because the bucket lives in Redis rather than in gateway memory, the rate limit is correct even if the gateway is horizontally scaled to multiple instances — they all check the same shared counter.
 
-`userKeyResolver` (in `RateLimiterConfig`) prefers `X-User-Id` — set moments earlier by `JwtAuthenticationWebFilter` — and only falls back to the caller's remote IP address for routes that bypass JWT validation:
+`userKeyResolver` (in `RateLimiterConfig`) prefers `X-User-Id` — set moments earlier by `JwtAuthenticationWebFilter`, which also removed any value the client sent — and only falls back to the caller's remote IP address for routes that bypass JWT validation:
 
 ```java
 @Bean
@@ -1105,11 +1112,12 @@ public KeyResolver userKeyResolver() {
 
 #### <span style="color:hsl(264,80%,58%)">Canary / Weighted Routing</span>
 
-`application.yml` defines two routes over the same `Weight` group name (`movie-info-group`), splitting traffic to `/v1/movieInfo/**` between a stable and a canary backend:
+The `canary` profile of `application.yml` (`--spring.profiles.active=local,canary`) defines two routes over the same `Weight` group name (`movie-info-group`), splitting traffic to `/v1/movieInfo/**` between a stable and a canary backend. It is opt-in because it needs a v2 instance at `services.info-url-v2` (port 8090 by default); without one, a fifth of the requests would fail. Both routes have `order: -1`, ahead of the programmatic `movie-info-service` route, and carry its `CircuitBreaker` and `Retry` filters themselves:
 
 ```yaml
 - id: movie-info-canary-v2
-  uri: ${services.info-url-v2:http://localhost:8083}
+  uri: ${services.info-url-v2:http://localhost:8090}
+  order: -1
   predicates:
     - Path=/v1/movieInfo/**
     - Weight=movie-info-group, 20
@@ -1118,6 +1126,7 @@ public KeyResolver userKeyResolver() {
 
 - id: movie-info-stable
   uri: ${services.info-url:http://localhost:8080}
+  order: -1
   predicates:
     - Path=/v1/movieInfo/**
     - Weight=movie-info-group, 80
@@ -1173,7 +1182,7 @@ resilience4j:
 When the circuit is open, the gateway forwards internally to `/fallback/{service}`. `FallbackController` handles these:
 
 ```java
-@GetMapping("/fallback/movieInfo")
+@RequestMapping("/fallback/movieInfo")   // every method: the forward keeps POST/PUT/DELETE
 public Mono<ResponseEntity<String>> movieInfoFallback() {
     log.warn("Circuit breaker open — Movie Info Service unavailable");
     return Mono.just(ResponseEntity
@@ -1556,13 +1565,12 @@ class MovieInfoControllerInt {
 
 [`@ServiceConnection`][ServiceConnection] automatically configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB. No hardcoded ports in config files needed. The test uses a named database (`movieinfotest`) configured in `src/test/resources/application.yml` to avoid touching the production `local` database.
 
-**macOS Docker Desktop requirements** (configured in root `pom.xml` Surefire):
+**macOS Docker Desktop notes** (not set in any `pom.xml`; export or pass them yourself if Testcontainers can't reach Docker):
 
 <ul>
 
 - `DOCKER_HOST=unix:///~/.docker/run/docker.sock` — Docker Desktop 4.x uses a non-standard socket path
 - `-Dapi.version=1.41` — docker-java shaded inside Testcontainers reads this JVM property to set the Docker API version (Docker Desktop 4.x requires ≥1.40)
-- `-Dnet.bytebuddy.experimental=true` — Mockito's ByteBuddy does not yet officially support Java 25 class version 69
 
 </ul>
 
@@ -1610,7 +1618,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 | GET    | `/v1/movieInfo/summary`      | List — `MovieSummary` projection (id/name/year only)                            | —                          | `200 OK` array                                                                |
 | GET    | `/v1/movieInfo/{id}/summary` | Single — `MovieSummary` projection                                              | —                          | `200 OK` or empty                                                             |
 
-**Gateway routing note:** the gateway's dedicated YAML SSE route predicate is `Path=/v1/movieInfoStream` (no slash before "stream"), which does not actually match the real endpoint path `/v1/movieInfo/stream`. In practice, requests to `/v1/movieInfo/stream` are instead matched by the broader programmatic route (`/v1/movieInfo/**`) from `GatewayRoutesConfig`, which *does* attach a circuit breaker and retry filter — worth knowing if the "[§10](#10-server-sent-events-and-sinks) SSE has no circuit breaker" reasoning is being relied upon for this specific path. The same slash mismatch exists for the review service's `/v1/reviewsStream` YAML predicate vs. the real `/v1/reviews/stream` path.
+**Gateway routing note:** `/v1/movieInfo/stream` and `/v1/reviews/stream` go through the dedicated YAML routes (`order: -2`), which skip the circuit breaker and retry ([§10](#10-server-sent-events-and-sinks)); everything else under `/v1/movieInfo/**` and `/v1/reviews/**` takes the programmatic CB-guarded routes.
 
 `MovieInfoDocument` schema:
 ```json
@@ -1627,15 +1635,15 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### <span style="color:hsl(37,80%,58%)">Review Service (via Gateway)</span>
 
-| Method | Path                          | Description               | Body                  | Response               |
-|--------|-------------------------------|---------------------------|-----------------------|------------------------|
-| POST   | `/v1/reviews`                 | Create a review           | `ReviewDocument` JSON | `201 Created`          |
-| GET    | `/v1/reviews`                 | List all reviews          | —                     | `200 OK` array         |
-| GET    | `/v1/reviews?movieInfoId=123` | Reviews for a movie       | —                     | `200 OK` filtered      |
-| GET    | `/v1/reviews/{id}`            | Get review by ID          | —                     | `200 OK` or `404`      |
-| PUT    | `/v1/reviews/{id}`            | Update comment and rating | `ReviewDocument` JSON | `200 OK`               |
-| DELETE | `/v1/reviews/{id}`            | Delete review             | —                     | `204 No Content`       |
-| GET    | `/v1/reviews/stream`          | SSE — latest review       | —                     | `application/x-ndjson` |
+| Method | Path                          | Description               | Body                  | Response                                                                                |
+|--------|-------------------------------|---------------------------|-----------------------|-----------------------------------------------------------------------------------------|
+| POST   | `/v1/reviews`                 | Create a review           | `ReviewDocument` JSON | `201 Created`                                                                           |
+| GET    | `/v1/reviews`                 | List all reviews          | —                     | `200 OK` array                                                                          |
+| GET    | `/v1/reviews?movieInfoId=123` | Reviews for a movie       | —                     | `200 OK` filtered; `400` if `movieInfoId` isn't a number (reviews store it as a `Long`) |
+| GET    | `/v1/reviews/{id}`            | Get review by ID          | —                     | `200 OK` or `404`                                                                       |
+| PUT    | `/v1/reviews/{id}`            | Update comment and rating | `ReviewDocument` JSON | `200 OK`                                                                                |
+| DELETE | `/v1/reviews/{id}`            | Delete review             | —                     | `204 No Content`                                                                        |
+| GET    | `/v1/reviews/stream`          | SSE — latest review       | —                     | `application/x-ndjson`                                                                  |
 
 `ReviewDocument` schema:
 ```json
@@ -1651,10 +1659,10 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### <span style="color:hsl(174,80%,58%)">Movies Aggregation Service (via Gateway)</span>
 
-| Method | Path                   | Description                    | Response                  |
-|--------|------------------------|--------------------------------|---------------------------|
-| GET    | `/v1/movies/{movieId}` | Movie with reviews             | `200 OK` `Movie` or `404` |
-| GET    | `/v1/movies/stream`    | SSE proxy of movie info stream | `application/x-ndjson`    |
+| Method | Path                   | Description                                                                       | Response                  |
+|--------|------------------------|-----------------------------------------------------------------------------------|---------------------------|
+| GET    | `/v1/movies/{movieId}` | Movie with reviews                                                                | `200 OK` `Movie` or `404` |
+| GET    | `/v1/movies/stream`    | SSE proxy of movie info stream (no 5s read timeout: the upstream stream may idle) | `application/x-ndjson`    |
 
 `Movie` schema:
 ```json
@@ -1670,15 +1678,15 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 `GatewayRoutesConfig` does not currently define a route for the r2dbc service, so it is called directly rather than through the gateway at `http://localhost:8765`:
 
-| Method | Path                         | Description                           | Body           | Response                  |
-|--------|------------------------------|---------------------------------------|----------------|---------------------------|
-| GET    | `/v1/genres`                 | List all genres                       | —              | `200 OK` array            |
-| GET    | `/v1/genres/{id}`            | Get genre by ID                       | —              | `200 OK` or `404`         |
-| GET    | `/v1/genres/search?name=Sci` | Case-insensitive substring search     | —              | `200 OK` filtered         |
-| POST   | `/v1/genres`                 | Create a genre                        | `Genre` JSON   | `201 Created`             |
-| POST   | `/v1/genres/batch`           | Bulk-insert genres in one transaction | `Genre[]` JSON | `201 Created` array       |
-| PUT    | `/v1/genres/{id}`            | Update a genre                        | `Genre` JSON   | `200 OK` or `404`         |
-| DELETE | `/v1/genres/{id}`            | Delete a genre                        | —              | `204 No Content` or `404` |
+| Method | Path                         | Description                           | Body           | Response                                                                                  |
+|--------|------------------------------|---------------------------------------|----------------|-------------------------------------------------------------------------------------------|
+| GET    | `/v1/genres`                 | List all genres                       | —              | `200 OK` array                                                                            |
+| GET    | `/v1/genres/{id}`            | Get genre by ID                       | —              | `200 OK` or `404`                                                                         |
+| GET    | `/v1/genres/search?name=Sci` | Case-insensitive substring search     | —              | `200 OK` filtered                                                                         |
+| POST   | `/v1/genres`                 | Create a genre                        | `Genre` JSON   | `201 Created`                                                                             |
+| POST   | `/v1/genres/batch`           | Bulk-insert genres in one transaction | `Genre[]` JSON | `201 Created` array; `409 Conflict` on a duplicate name, with the whole batch rolled back |
+| PUT    | `/v1/genres/{id}`            | Update a genre                        | `Genre` JSON   | `200 OK` or `404`                                                                         |
+| DELETE | `/v1/genres/{id}`            | Delete a genre                        | —              | `204 No Content` or `404`                                                                 |
 
 `Genre` schema:
 ```json
@@ -1695,12 +1703,12 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 ### <span style="color:hsl(89,80%,58%)">Gateway Actuator Endpoints</span>
 
-| Path                           | Description                                        |
-|--------------------------------|----------------------------------------------------|
-| `GET /actuator/health`         | Health of gateway and downstream services          |
-| `GET /actuator/gateway/routes` | All registered routes (YAML + programmatic merged) |
-| `GET /actuator/metrics`        | Micrometer metrics                                 |
-| `GET /actuator/prometheus`     | Prometheus scrape endpoint                         |
+| Path                           | Description                                                                                                                                                        |
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `GET /actuator/health`         | Health of gateway and downstream services                                                                                                                          |
+| `GET /actuator/gateway/routes` | All registered routes (YAML + programmatic merged); read-only (`management.endpoint.gateway.access: read-only`), so routes can't be created or refreshed over HTTP |
+| `GET /actuator/metrics`        | Micrometer metrics                                                                                                                                                 |
+| `GET /actuator/prometheus`     | Prometheus scrape endpoint                                                                                                                                         |
 
 ---
 
@@ -1711,7 +1719,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 
 <ul>
 
-- Java 25 (`JAVA_HOME` must point to JDK 25)
+- Java 27 (`JAVA_HOME` must point to JDK 27)
 - Maven 3.9+
 - Docker (for MongoDB, Redis, and PostgreSQL via `docker-compose.yml`, and for Testcontainers-backed integration tests)
 
@@ -1730,7 +1738,7 @@ If you are on macOS with Docker Desktop, Testcontainers-based integration tests 
 ```bash
 export DOCKER_HOST="unix://${HOME}/.docker/run/docker.sock"
 ```
-(This is already wired into the root `pom.xml`'s Surefire `<environmentVariables>` for `mvn test`, but is needed if you run tests from an IDE.)
+(Nothing in the poms sets it, so export it in the shell or IDE run configuration that runs the tests.)
 
 ### <span style="color:hsl(279,80%,58%)">Build Everything</span>
 
@@ -1787,7 +1795,7 @@ Alternatively, skip the gateway entirely and call a service on its own port dire
 
 ```bash
 # Terminal A — subscribe to SSE stream through the gateway (requires the Bearer token above)
-curl -N -H "Authorization: Bearer $TOKEN" http://localhost:8765/v1/movieInfoStream
+curl -N -H "Authorization: Bearer $TOKEN" http://localhost:8765/v1/movieInfo/stream
 
 # Terminal B — create a movie; it appears in Terminal A immediately
 curl -s -X POST http://localhost:8765/v1/movieInfo \
@@ -1967,20 +1975,20 @@ This project was built to cement specific reactive concepts through working code
 
 <!-- Library classes mentioned above, linked to their source at the versions this project builds with. -->
 
-[BlockingQueue]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/concurrent/BlockingQueue.java
-[CompletableFuture]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/concurrent/CompletableFuture.java
-[Connection]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.sql/share/classes/java/sql/Connection.java
+[BlockingQueue]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/concurrent/BlockingQueue.java
+[CompletableFuture]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/concurrent/CompletableFuture.java
+[Connection]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.sql/share/classes/java/sql/Connection.java
 [Context]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/util/context/Context.java
 [Controller]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-context/src/main/java/org/springframework/stereotype/Controller.java
 [CreatedDate]: https://github.com/spring-projects/spring-data-commons/blob/4.1.1/src/main/java/org/springframework/data/annotation/CreatedDate.java
 [DispatcherHandler]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/DispatcherHandler.java
 [Document]: https://github.com/spring-projects/spring-data-mongodb/blob/5.1.1/spring-data-mongodb/src/main/java/org/springframework/data/mongodb/core/mapping/Document.java
-[Duration]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/time/Duration.java
+[Duration]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/time/Duration.java
 [EnableR2dbcAuditing]: https://github.com/spring-projects/spring-data-relational/blob/4.1.1/spring-data-r2dbc/src/main/java/org/springframework/data/r2dbc/config/EnableR2dbcAuditing.java
-[Flow]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/concurrent/Flow.java
+[Flow]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/concurrent/Flow.java
 [Flux]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Flux.java
 [FluxFlatMap]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/FluxFlatMap.java
-[Function]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/function/Function.java
+[Function]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/function/Function.java
 [GatewayFilterChain]: https://github.com/spring-cloud/spring-cloud-gateway/blob/v5.0.3/spring-cloud-gateway-server-webflux/src/main/java/org/springframework/cloud/gateway/filter/GatewayFilterChain.java
 [GatewayFilterFactory]: https://github.com/spring-cloud/spring-cloud-gateway/blob/v5.0.3/spring-cloud-gateway-server-webflux/src/main/java/org/springframework/cloud/gateway/filter/factory/GatewayFilterFactory.java
 [GetMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/GetMapping.java
@@ -1988,16 +1996,16 @@ This project was built to cement specific reactive concepts through working code
 [Id]: https://github.com/spring-projects/spring-data-commons/blob/4.1.1/src/main/java/org/springframework/data/annotation/Id.java
 [Jackson2JsonRedisSerializer]: https://github.com/spring-projects/spring-data-redis/blob/4.1.1/src/main/java/org/springframework/data/redis/serializer/Jackson2JsonRedisSerializer.java
 [JavaTimeModule]: https://github.com/FasterXML/jackson-modules-java8/blob/jackson-modules-java8-2.21.5/datetime/src/main/java/com/fasterxml/jackson/datatype/jsr310/JavaTimeModule.java
-[List]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/List.java
-[LocalDate]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/time/LocalDate.java
-[Map]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/Map.java
+[List]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/List.java
+[LocalDate]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/time/LocalDate.java
+[Map]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/Map.java
 [MessageMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-messaging/src/main/java/org/springframework/messaging/handler/annotation/MessageMapping.java
 [MockServerRequest]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-test/src/main/java/org/springframework/mock/web/reactive/function/server/MockServerRequest.java
 [MongoRepository]: https://github.com/spring-projects/spring-data-mongodb/blob/5.1.1/spring-data-mongodb/src/main/java/org/springframework/data/mongodb/repository/MongoRepository.java
 [Mono]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Mono.java
 [MonoSubscribeOn]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/MonoSubscribeOn.java
 [ObjectMapper]: https://github.com/FasterXML/jackson-databind/blob/jackson-databind-2.21.5/src/main/java/com/fasterxml/jackson/databind/ObjectMapper.java
-[Optional]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/util/Optional.java
+[Optional]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/util/Optional.java
 [Order]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-core/src/main/java/org/springframework/core/annotation/Order.java
 [Ordered]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-core/src/main/java/org/springframework/core/Ordered.java
 [PathVariable]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/PathVariable.java
@@ -2010,7 +2018,7 @@ This project was built to cement specific reactive concepts through working code
 [RequestMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RequestMapping.java
 [RestController]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/bind/annotation/RestController.java
 [RestTemplate]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-web/src/main/java/org/springframework/web/client/RestTemplate.java
-[ResultSet]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.sql/share/classes/java/sql/ResultSet.java
+[ResultSet]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.sql/share/classes/java/sql/ResultSet.java
 [RouterFunction]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/function/server/RouterFunction.java
 [Scheduled]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-context/src/main/java/org/springframework/scheduling/annotation/Scheduled.java
 [Schedulers]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/scheduler/Schedulers.java
@@ -2024,13 +2032,13 @@ This project was built to cement specific reactive concepts through working code
 [SimpleUrlHandlerMapping]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-webflux/src/main/java/org/springframework/web/reactive/handler/SimpleUrlHandlerMapping.java
 [Sinks]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-core/src/main/java/reactor/core/publisher/Sinks.java
 [SpringBootTest]: https://github.com/spring-projects/spring-boot/blob/v4.1.1/core/spring-boot-test/src/main/java/org/springframework/boot/test/context/SpringBootTest.java
-[Statement]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.sql/share/classes/java/sql/Statement.java
+[Statement]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.sql/share/classes/java/sql/Statement.java
 [StepVerifier]: https://github.com/reactor/reactor-core/blob/v3.8.7/reactor-test/src/main/java/reactor/test/StepVerifier.java
-[String]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/String.java
+[String]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/lang/String.java
 [Table]: https://github.com/spring-projects/spring-data-relational/blob/4.1.1/spring-data-relational/src/main/java/org/springframework/data/relational/core/mapping/Table.java
 [Tailable]: https://github.com/spring-projects/spring-data-mongodb/blob/5.1.1/spring-data-mongodb/src/main/java/org/springframework/data/mongodb/repository/Tailable.java
-[Thread]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/Thread.java
-[ThreadLocal]: https://github.com/openjdk/jdk/blob/jdk-25-ga/src/java.base/share/classes/java/lang/ThreadLocal.java
+[Thread]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/lang/Thread.java
+[ThreadLocal]: https://github.com/openjdk/jdk/blob/jdk-27-ga/src/java.base/share/classes/java/lang/ThreadLocal.java
 [Transactional]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-tx/src/main/java/org/springframework/transaction/annotation/Transactional.java
 [TransactionalOperator]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-tx/src/main/java/org/springframework/transaction/reactive/TransactionalOperator.java
 [TransactionSynchronizationManager]: https://github.com/spring-projects/spring-framework/blob/v7.0.9/spring-tx/src/main/java/org/springframework/transaction/reactive/TransactionSynchronizationManager.java

@@ -207,6 +207,10 @@ Flux<MovieInfo> getMovieInfoStream();
 public Flux<MovieInfo> retrieveMovieInfoStream() {
     return webClient.get()
             .uri(movieInfoUrl + "/stream")
+            // the shared client's 5s responseTimeout is the maximum gap between reads; an SSE
+            // stream is silent until its next event, so lift it (0 = off) for this request
+            .httpRequest(request -> request.<HttpClientRequest>getNativeRequest()
+                    .responseTimeout(Duration.ZERO))
             .retrieve()
             .onStatus(...)
             .bodyToFlux(MovieInfo.class)
