@@ -41,9 +41,15 @@ public class GlobalLoggingFilter implements GlobalFilter, Ordered {
                 .header(CORRELATION_ID_HEADER, cid)
                 .build();
 
+        // The proxied response is written, and its headers are read-only, by the time the
+        // chain completes: add the header when the response commits instead.
+        exchange.getResponse().beforeCommit(() -> {
+            exchange.getResponse().getHeaders().set(CORRELATION_ID_HEADER, cid);
+            return Mono.empty();
+        });
+
         return chain.filter(exchange.mutate().request(mutatedRequest).build())
                 .doOnSuccess(v -> {
-                    exchange.getResponse().getHeaders().add(CORRELATION_ID_HEADER, cid);
                     log.info("← {} {} {}ms correlationId={}",
                             exchange.getResponse().getStatusCode(),
                             exchange.getRequest().getURI().getPath(),

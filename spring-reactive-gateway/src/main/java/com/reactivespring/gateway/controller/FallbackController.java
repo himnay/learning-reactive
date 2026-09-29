@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
@@ -14,6 +13,10 @@ import reactor.core.publisher.Mono;
  * service is unavailable.  Each endpoint returns a 503 with a human-readable
  * message so callers get a structured error instead of a raw connection error.
  */
+/*
+ * The circuit breaker forwards with the original method, so a POST/PUT/DELETE fallback must
+ * not hit a GET-only mapping (405): each fallback answers every method.
+ */
 @RestController
 @RequestMapping("/fallback")
 public class FallbackController {
@@ -21,7 +24,7 @@ public class FallbackController {
     private static final Logger log = LoggerFactory.getLogger(FallbackController.class);
 
     /** Returns the movie info fallback. */
-    @GetMapping("/movieInfo")
+    @RequestMapping("/movieInfo")
     public Mono<ResponseEntity<String>> movieInfoFallback() {
         log.warn("Circuit breaker open — Movie Info Service unavailable");
         return Mono.just(ResponseEntity
@@ -30,7 +33,7 @@ public class FallbackController {
     }
 
     /** Returns the reviews fallback. */
-    @GetMapping("/reviews")
+    @RequestMapping("/reviews")
     public Mono<ResponseEntity<String>> reviewsFallback() {
         log.warn("Circuit breaker open — Reviews Service unavailable");
         return Mono.just(ResponseEntity
@@ -39,7 +42,7 @@ public class FallbackController {
     }
 
     /** Returns the movies fallback. */
-    @GetMapping("/movies")
+    @RequestMapping("/movies")
     public Mono<ResponseEntity<String>> moviesFallback() {
         log.warn("Circuit breaker open — Movies Service unavailable");
         return Mono.just(ResponseEntity

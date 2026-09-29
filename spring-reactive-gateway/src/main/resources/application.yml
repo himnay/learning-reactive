@@ -12,59 +12,120 @@ spring:
       port: 6379
   cloud:
     gateway:
-      httpclient:
-        wiretap: true
-        connect-timeout: 1000
-        response-timeout: 5s
+      # Spring Cloud Gateway 4.3 moved the WebFlux server properties under server.webflux and
+      # 5.0 (Spring Cloud 2025.1) stopped reading the old spring.cloud.gateway.* keys, so
+      # everything below would be silently ignored one level up.
+      server:
+        webflux:
+          httpclient:
+            wiretap: true
+            connect-timeout: 1000
+            response-timeout: 5s     # time to the response headers; SSE bodies may idle longer
 
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOriginPatterns: "*"
-            allowedMethods: [GET, POST, PUT, DELETE, OPTIONS, PATCH]
-            allowedHeaders: "*"
-            exposedHeaders: [X-Correlation-Id, X-Response-Time-Ms, X-Request-Id]
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns: "*"
+                allowedMethods: [GET, POST, PUT, DELETE, OPTIONS, PATCH]
+                allowedHeaders: "*"
+                exposedHeaders: [X-Correlation-Id, X-Response-Time-Ms, X-Request-Id]
 
-      default-filters:
-        - AddResponseHeader=X-Powered-By, Spring-Cloud-Gateway
-        - SecureHeaders
-        - name: RequestRateLimiter
-          args:
-            redis-rate-limiter.replenishRate: 10
-            redis-rate-limiter.burstCapacity: 20
-            redis-rate-limiter.requestedTokens: 1
-            key-resolver: "#{@userKeyResolver}"
+          default-filters:
+            - AddResponseHeader=X-Powered-By, Spring-Cloud-Gateway
+            - SecureHeaders
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
 
-      routes:
-        - id: movie-info-sse
-          uri: ${services.info-url:http://localhost:8080}
-          predicates:
-            - Path=/v1/movieInfo/stream
-          filters:
-            - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
+          # Dedicated SSE routes without circuit breaker or retry. order -2 puts them ahead of the
+          # programmatic /v1/movieInfo/** and /v1/reviews/** routes (GatewayRoutesConfig, order 0),
+          # which would otherwise match the stream paths first.
+          routes:
+            - id: movie-info-sse
+              uri: ${services.info-url:http://localhost:8080}
+              order: -2
+              predicates:
+                - Path=/v1/movieInfo/stream
+              filters:
+                - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
 
-        - id: movie-review-sse
-          uri: ${services.review-url:http://localhost:8081}
-          predicates:
-            - Path=/v1/reviews/stream
-          filters:
-            - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
+            - id: movie-review-sse
+              uri: ${services.review-url:http://localhost:8081}
+              order: -2
+              predicates:
+                - Path=/v1/reviews/stream
+              filters:
+                - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
 
-        # Canary routing: 20% traffic to v2 (new version on port 8083)
-        - id: movie-info-canary-v2
-          uri: ${services.info-url-v2:http://localhost:8083}
-          predicates:
-            - Path=/v1/movieInfo/**
-            - Weight=movie-info-group, 20
-          filters:
-            - AddRequestHeader=X-Canary, true
+---
+# Canary release of the movie info service: 80% of /v1/movieInfo/** stays on the stable instance,
+# 20% goes to a v2 instance on services.info-url-v2 (default port 8090). Opt-in (--spring.profiles.active=local,canary)
+# because it needs that v2 instance running; without one, a fifth of the requests would fail.
+# A profile's routes list replaces the default list, so the SSE routes are repeated here.
+spring:
+  config:
+    activate:
+      on-profile: canary
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: movie-info-sse
+              uri: ${services.info-url:http://localhost:8080}
+              order: -2
+              predicates:
+                - Path=/v1/movieInfo/stream
+              filters:
+                - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
 
-        # Stable routing: 80% traffic to production (port 8080)
-        - id: movie-info-stable
-          uri: ${services.info-url:http://localhost:8080}
-          predicates:
-            - Path=/v1/movieInfo/**
-            - Weight=movie-info-group, 80
+            - id: movie-review-sse
+              uri: ${services.review-url:http://localhost:8081}
+              order: -2
+              predicates:
+                - Path=/v1/reviews/stream
+              filters:
+                - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
+
+            # order -1: ahead of the programmatic movie-info-service route, so the weighted
+            # routes carry its circuit breaker and retry themselves.
+            - id: movie-info-canary-v2
+              uri: ${services.info-url-v2:http://localhost:8090}   # 8083 is the r2dbc service
+              order: -1
+              predicates:
+                - Path=/v1/movieInfo/**
+                - Weight=movie-info-group, 20
+              filters:
+                - AddRequestHeader=X-Canary, true
+                - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
+                - name: CircuitBreaker
+                  args:
+                    name: movieInfoCB
+                    fallbackUri: forward:/fallback/movieInfo
+                - name: Retry
+                  args:
+                    retries: 3
+                    statuses: INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE
+
+            - id: movie-info-stable
+              uri: ${services.info-url:http://localhost:8080}
+              order: -1
+              predicates:
+                - Path=/v1/movieInfo/**
+                - Weight=movie-info-group, 80
+              filters:
+                - AddRequestHeader=X-Gateway-Source, spring-reactive-gateway
+                - name: CircuitBreaker
+                  args:
+                    name: movieInfoCB
+                    fallbackUri: forward:/fallback/movieInfo
+                - name: Retry
+                  args:
+                    retries: 3
+                    statuses: INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE
 
 ---
 spring:
@@ -90,7 +151,9 @@ management:
     health:
       show-details: always
     gateway:
-      enabled: true
+      # read-only: GET /actuator/gateway/routes works; creating routes or refreshing them does
+      # not (/actuator/** skips JWT auth, and write access would make the gateway an open proxy)
+      access: read-only
   metrics:
     tags:
       application: ${spring.application.name}

@@ -16,11 +16,12 @@ import java.util.UUID;
  * If not, we mint a new UUID.  The id is also written into Reactor Context so
  * downstream operators can read it without re-parsing headers.
  *
- * Order is HIGHEST_PRECEDENCE - 1 so this runs before almost everything else
- * (HIGHEST_PRECEDENCE itself is reserved for security/auth filters).
+ * Order is HIGHEST_PRECEDENCE + 1 so this runs before almost everything else, including
+ * JwtAuthenticationWebFilter (HIGHEST_PRECEDENCE + 10). Not HIGHEST_PRECEDENCE - 1: that is
+ * Integer.MIN_VALUE - 1, which overflows to Integer.MAX_VALUE and would run this filter last.
  */
 @Component
-@org.springframework.core.annotation.Order(Ordered.HIGHEST_PRECEDENCE - 1)
+@org.springframework.core.annotation.Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class RequestIdWebFilter implements WebFilter {
 
     @Override

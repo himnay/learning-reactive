@@ -26,18 +26,22 @@ public class PostFilterGatewayFilterFactory
 
     @Override
     public GatewayFilter apply(Config config) {
-        return (exchange, chain) -> chain.filter(exchange).then(
-                reactor.core.publisher.Mono.fromRunnable(() -> {
-                    String startHeader = exchange.getRequest().getHeaders().getFirst("X-Request-Start");
-                    if (startHeader != null) {
-                        long elapsed = System.currentTimeMillis() - Long.parseLong(startHeader);
-                        exchange.getResponse().getHeaders().add("X-Response-Time-Ms", String.valueOf(elapsed));
-                        log.debug("[PostFilter] ← {} {} {}ms",
-                                exchange.getResponse().getStatusCode(),
-                                exchange.getRequest().getPath(), elapsed);
-                    }
-                })
-        );
+        // Response headers are read-only once the response is committed, which has happened by
+        // the time chain.filter() completes, so the header is added in a beforeCommit action.
+        return (exchange, chain) -> {
+            exchange.getResponse().beforeCommit(() -> {
+                String startHeader = exchange.getRequest().getHeaders().getFirst("X-Request-Start");
+                if (startHeader != null) {
+                    long elapsed = System.currentTimeMillis() - Long.parseLong(startHeader);
+                    exchange.getResponse().getHeaders().set("X-Response-Time-Ms", String.valueOf(elapsed));
+                    log.debug("[PostFilter] ← {} {} {}ms",
+                            exchange.getResponse().getStatusCode(),
+                            exchange.getRequest().getPath(), elapsed);
+                }
+                return reactor.core.publisher.Mono.empty();
+            });
+            return chain.filter(exchange);
+        };
     }
 
     public static class Config {
