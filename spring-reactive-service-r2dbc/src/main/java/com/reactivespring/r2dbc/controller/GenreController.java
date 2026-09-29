@@ -3,6 +3,7 @@ package com.reactivespring.r2dbc.controller;
 import com.reactivespring.r2dbc.entity.Genre;
 import com.reactivespring.r2dbc.service.GenreService;
 import jakarta.validation.Valid;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -69,5 +70,16 @@ public class GenreController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(@PathVariable Long id) {
         return genreService.delete(id);
+    }
+
+    /**
+     * genres.name is UNIQUE: a duplicate name is the client's conflict with existing data, so answer
+     * 409 instead of letting the constraint violation surface as a 500. The transaction has already
+     * rolled back by the time this runs.
+     */
+    @ExceptionHandler(DuplicateKeyException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Mono<String> handleDuplicateName(DuplicateKeyException ex) {
+        return Mono.just("A genre with that name already exists");
     }
 }

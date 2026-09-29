@@ -1,6 +1,7 @@
 package com.reactivespring.handler;
 
 import com.reactivespring.entity.ReviewDocument;
+import com.reactivespring.exception.ReviewDataException;
 import com.reactivespring.exception.ReviewNotFoundException;
 import com.reactivespring.repository.ReviewRepository;
 import com.reactivespring.validator.ReviewValidator;
@@ -40,7 +41,15 @@ public class ReviewHandler {
         var movieInfoId = request.queryParam("movieInfoId");
         var reviewId = request.pathVariables().get("reviewId");
         if (movieInfoId.isPresent()) {
-            var reviews = reviewRepository.findByMovieInfoId(Long.valueOf(movieInfoId.get()))
+            long id;
+            try {
+                id = Long.parseLong(movieInfoId.get());
+            } catch (NumberFormatException e) {
+                // Reviews store movieInfoId as a number; anything else (e.g. a Mongo ObjectId) is a
+                // client error, not a 500 that the movies service would then retry three times.
+                return Mono.error(new ReviewDataException("movieInfoId must be a number: " + movieInfoId.get()));
+            }
+            var reviews = reviewRepository.findByMovieInfoId(id)
                     .switchIfEmpty(Mono.error(new ReviewNotFoundException("Review not found for movie " + movieInfoId.get())));
             return ServerResponse.ok().body(reviews, ReviewDocument.class);
         } else if (StringUtils.hasLength(reviewId)) {

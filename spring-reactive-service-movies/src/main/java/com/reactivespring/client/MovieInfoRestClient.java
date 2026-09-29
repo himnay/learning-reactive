@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClientRequest;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -65,6 +66,11 @@ public class MovieInfoRestClient {
         return webClient
                 .get()
                 .uri(movieInfoUrl + "/stream")
+                // The shared WebClient's 5s responseTimeout is Reactor Netty's maximum gap between
+                // reads. An SSE stream is silent until its next event, so lift it for this request
+                // (0 disables the read-timeout handler) or the stream dies after 5 idle seconds.
+                .httpRequest(request -> request.<HttpClientRequest>getNativeRequest()
+                        .responseTimeout(Duration.ZERO))
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response ->
                         response.bodyToMono(String.class)

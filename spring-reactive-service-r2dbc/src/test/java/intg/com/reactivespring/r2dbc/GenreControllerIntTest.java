@@ -144,7 +144,7 @@ class GenreControllerIntTest {
     }
 
     @Test
-    @DisplayName("Duplicate batch insert rolls back entire transaction")
+    @DisplayName("Duplicate batch insert answers 409 and rolls back the entire transaction")
     void batchRollbackOnDuplicate() {
         // "Action" already exists; this batch should fail and roll back "NewOne"
         List<Genre> batch = List.of(
@@ -155,7 +155,7 @@ class GenreControllerIntTest {
         webTestClient.post().uri("/v1/genres/batch")
                 .bodyValue(batch)
                 .exchange()
-                .expectStatus().is5xxServerError();
+                .expectStatus().isEqualTo(409);   // duplicate name: Conflict, not a server error
 
         // NewOne must NOT be in the DB (transaction rolled back)
         StepVerifier.create(repository.findByName("NewOne"))

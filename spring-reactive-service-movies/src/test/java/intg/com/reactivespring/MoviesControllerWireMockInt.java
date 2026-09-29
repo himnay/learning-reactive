@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.reactivespring.entity.Movie;
+import com.reactivespring.entity.MovieInfo;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.test.StepVerifier;
+
+import java.time.Duration;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -137,5 +141,29 @@ class MoviesControllerWireMockInt {
                     assertThat(movie.movieInfo().releaseDate()).hasToString("2005-06-15");
                     assertThat(movie.reviewList()).isEmpty();
                 });
+    }
+
+    @Test
+    @DisplayName("GET /v1/movies/stream survives an upstream SSE stream that stays silent longer than the 5s read timeout")
+    void movieInfoStreamSurvivesIdleUpstream() {
+        // An SSE stream sends nothing until the next event; model a 6s wait for the first one.
+        stubFor(get(urlEqualTo("/v1/movieInfo/stream"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", MediaType.TEXT_EVENT_STREAM_VALUE)
+                        .withBody("data:{\"movieInfoId\":\"1\",\"name\":\"Batman Begins\",\"year\":2005,\"cast\":[\"Christian Bale\"]}\n\n")
+                        .withFixedDelay(6_000)));
+
+        webTestClient.mutate().responseTimeout(Duration.ofSeconds(30)).build()
+                .get()
+                .uri("/v1/movies/stream")
+                .accept(MediaType.APPLICATION_NDJSON)
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(MovieInfo.class)
+                .getResponseBody()
+                .take(1)
+                .as(StepVerifier::create)
+                .assertNext(movieInfo -> assertThat(movieInfo.name()).isEqualTo("Batman Begins"))
+                .verifyComplete();
     }
 }

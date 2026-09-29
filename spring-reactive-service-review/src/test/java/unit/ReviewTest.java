@@ -183,4 +183,15 @@ class ReviewTest {
                 .expectStatus().isNoContent()
                 .expectBody(Void.class);
     }
+
+    @Test
+    @DisplayName("GET /v1/reviews?movieInfoId=<not a number> is a 400, not a 500")
+    void getReviewsWithNonNumericMovieInfoId() {
+        webTestClient.get()
+                .uri("/v1/reviews?movieInfoId=65f1c0ffee")
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("movieInfoId must be a number"));
+    }
 }
