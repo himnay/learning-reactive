@@ -3,18 +3,16 @@ package com.reactivespring.service.impl;
 import com.reactivespring.entity.MovieInfoDocument;
 import com.reactivespring.repository.MovieInfoRepository;
 import com.reactivespring.service.MovieInfoService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
+@RequiredArgsConstructor
 public class MovieInfoServiceImpl implements MovieInfoService {
 
     private final MovieInfoRepository movieInfoRepository;
-
-    public MovieInfoServiceImpl(MovieInfoRepository movieInfoRepository) {
-        this.movieInfoRepository = movieInfoRepository;
-    }
 
     @Override
     public Mono<MovieInfoDocument> createMovieInfo(MovieInfoDocument movieInfoDocument) {

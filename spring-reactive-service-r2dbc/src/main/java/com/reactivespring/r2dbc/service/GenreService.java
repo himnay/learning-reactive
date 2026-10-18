@@ -2,6 +2,7 @@ package com.reactivespring.r2dbc.service;
 
 import com.reactivespring.r2dbc.entity.Genre;
 import com.reactivespring.r2dbc.repository.GenreRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.reactive.TransactionalOperator;
@@ -12,15 +13,11 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class GenreService {
 
     private final GenreRepository repository;
     private final TransactionalOperator txOperator;
-
-    public GenreService(GenreRepository repository, TransactionalOperator txOperator) {
-        this.repository = repository;
-        this.txOperator = txOperator;
-    }
 
     /** Finds all. */
     public Flux<Genre> findAll() {

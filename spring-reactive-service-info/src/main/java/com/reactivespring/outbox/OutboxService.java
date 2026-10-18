@@ -1,5 +1,6 @@
 package com.reactivespring.outbox;
 
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,15 +11,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class OutboxService {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxService.class);
 
     private final OutboxRepository outboxRepository;
-
-    public OutboxService(OutboxRepository outboxRepository) {
-        this.outboxRepository = outboxRepository;
-    }
 
     /**
      * Persist an outbox event as PENDING.

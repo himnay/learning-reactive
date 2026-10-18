@@ -1,6 +1,7 @@
 package com.reactivespring.cache;
 
 import com.reactivespring.entity.MovieInfoDocument;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -9,15 +10,12 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 
 @Service
+@RequiredArgsConstructor
 public class MovieInfoCacheService {
 
     private final ReactiveRedisTemplate<String, MovieInfoDocument> redisTemplate;
     private static final Duration TTL = Duration.ofMinutes(10);
     private static final String KEY_PREFIX = "movie:info:";
-
-    public MovieInfoCacheService(ReactiveRedisTemplate<String, MovieInfoDocument> redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     /**
      * Cache-aside pattern:

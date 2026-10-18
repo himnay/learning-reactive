@@ -1,6 +1,7 @@
 package com.reactivespring.router;
 
 import com.reactivespring.handler.ReviewHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.server.RouterFunction;
@@ -11,13 +12,10 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
 @Configuration
+@RequiredArgsConstructor
 public class ReviewRouter {
 
     private final ReviewHandler reviewHandler;
-
-    public ReviewRouter(ReviewHandler reviewHandler) {
-        this.reviewHandler = reviewHandler;
-    }
 
     /** Defines the review router function bean. */
     @Bean

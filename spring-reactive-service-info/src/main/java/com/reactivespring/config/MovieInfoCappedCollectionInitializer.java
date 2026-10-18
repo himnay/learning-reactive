@@ -1,5 +1,6 @@
 package com.reactivespring.config;
 
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -16,15 +17,12 @@ import org.springframework.stereotype.Component;
  * a Mongo bean it has no other reason to need.
  */
 @Component
+@RequiredArgsConstructor
 class MovieInfoCappedCollectionInitializer {
 
     private static final Logger log = LoggerFactory.getLogger(MovieInfoCappedCollectionInitializer.class);
 
     private final ReactiveMongoTemplate mongoTemplate;
-
-    public MovieInfoCappedCollectionInitializer(ReactiveMongoTemplate mongoTemplate) {
-        this.mongoTemplate = mongoTemplate;
-    }
 
     // Tailable cursors require a capped collection. Create it on startup if absent.
     // Max size 1MB — oldest documents are evicted when the cap is reached.

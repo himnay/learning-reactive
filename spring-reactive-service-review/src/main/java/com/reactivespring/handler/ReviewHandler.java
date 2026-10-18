@@ -5,6 +5,7 @@ import com.reactivespring.exception.ReviewDataException;
 import com.reactivespring.exception.ReviewNotFoundException;
 import com.reactivespring.repository.ReviewRepository;
 import com.reactivespring.validator.ReviewValidator;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 @Component
+@RequiredArgsConstructor
 public class ReviewHandler {
 
     // Sinks.many().replay().latest() — hot publisher replaying only the latest event to new subscribers
@@ -22,11 +24,6 @@ public class ReviewHandler {
 
     private final ReviewValidator reviewValidator;
     private final ReviewRepository reviewRepository;
-
-    public ReviewHandler(ReviewValidator reviewValidator, ReviewRepository reviewRepository) {
-        this.reviewValidator = reviewValidator;
-        this.reviewRepository = reviewRepository;
-    }
 
     /** Adds review. */
     public Mono<ServerResponse> addReview(ServerRequest request) {

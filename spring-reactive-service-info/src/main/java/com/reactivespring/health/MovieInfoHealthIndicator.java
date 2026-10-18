@@ -1,19 +1,17 @@
 package com.reactivespring.health;
 
 import com.reactivespring.repository.MovieInfoRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 @Component
+@RequiredArgsConstructor
 public class MovieInfoHealthIndicator implements ReactiveHealthIndicator {
 
     private final MovieInfoRepository repository;
-
-    public MovieInfoHealthIndicator(MovieInfoRepository repository) {
-        this.repository = repository;
-    }
 
     @Override
     public Mono<Health> health() {

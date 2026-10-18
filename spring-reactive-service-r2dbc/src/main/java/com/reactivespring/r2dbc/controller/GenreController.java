@@ -3,6 +3,7 @@ package com.reactivespring.r2dbc.controller;
 import com.reactivespring.r2dbc.entity.Genre;
 import com.reactivespring.r2dbc.service.GenreService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -12,14 +13,11 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/v1/genres")
 public class GenreController {
 
     private final GenreService genreService;
-
-    public GenreController(GenreService genreService) {
-        this.genreService = genreService;
-    }
 
     /** Finds all. */
     @GetMapping

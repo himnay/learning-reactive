@@ -6,6 +6,7 @@ import com.reactivespring.client.ReviewRestClient;
 import com.reactivespring.entity.Movie;
 import com.reactivespring.entity.MovieInfo;
 import com.reactivespring.entity.Review;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -16,17 +17,13 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @RestController
+@RequiredArgsConstructor
 public class MoviesController implements MoviesApi {
 
     private static final Logger log = LoggerFactory.getLogger(MoviesController.class);
 
     private final MovieInfoRestClient movieInfoRestClient;
     private final ReviewRestClient reviewRestClient;
-
-    public MoviesController(MovieInfoRestClient movieInfoRestClient, ReviewRestClient reviewRestClient) {
-        this.movieInfoRestClient = movieInfoRestClient;
-        this.reviewRestClient = reviewRestClient;
-    }
 
     @Override
     public Mono<ResponseEntity<Movie>> retrieveMovieById(String movieId) {

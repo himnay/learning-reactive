@@ -7,6 +7,7 @@ import com.reactivespring.projection.MovieInfoProjectionRepository;
 import com.reactivespring.projection.MovieSummary;
 import com.reactivespring.repository.MovieInfoRepository;
 import com.reactivespring.service.MovieInfoService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import java.time.Duration;
 import java.util.Map;
 
 @RestController
+@RequiredArgsConstructor
 public class MovieInfoController implements MovieInfoApi {
 
     private static final Logger log = LoggerFactory.getLogger(MovieInfoController.class);
@@ -31,16 +33,6 @@ public class MovieInfoController implements MovieInfoApi {
     private final OutboxService outboxService;
     private final MovieInfoProjectionRepository projectionRepository;
     private final MovieInfoRepository movieInfoRepository;
-
-    public MovieInfoController(MovieInfoService movieInfoService,
-                               OutboxService outboxService,
-                               MovieInfoProjectionRepository projectionRepository,
-                               MovieInfoRepository movieInfoRepository) {
-        this.movieInfoService = movieInfoService;
-        this.outboxService = outboxService;
-        this.projectionRepository = projectionRepository;
-        this.movieInfoRepository = movieInfoRepository;
-    }
 
     @Override
     public Flux<Integer> nonBlockingFlux() {
