@@ -222,7 +222,7 @@ mvn test
       ...
   }
   ```
-  [`@ServiceConnection`][ServiceConnection] auto-configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB instance — no hardcoded port in `application-test.yml`. This exercises the real [`RouterFunction`][RouterFunction] → `ReviewHandler` → `ReviewRepository` chain end to end via [`WebTestClient`][WebTestClient], against a real (containerized) MongoDB.
+  [`@ServiceConnection`][ServiceConnection] auto-configures `spring.data.mongodb.uri` to point at the Testcontainers-managed MongoDB instance — no hardcoded port in the test `application.yml`. This exercises the real [`RouterFunction`][RouterFunction] → `ReviewHandler` → `ReviewRepository` chain end to end via [`WebTestClient`][WebTestClient], against a real (containerized) MongoDB.
 
 ## <span style="color:hsl(343,80%,58%)">8. Running This Module</span>
 
