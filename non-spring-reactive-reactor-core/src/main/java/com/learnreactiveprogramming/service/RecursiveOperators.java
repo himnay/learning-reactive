@@ -1,5 +1,6 @@
 package com.learnreactiveprogramming.service;
 
+import com.learnreactiveprogramming.model.FileNode;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
@@ -32,12 +33,9 @@ public class RecursiveOperators {
     }
 
     /**
-     * Simulates recursive directory traversal using expand (BFS).
+     * Returns the directory traversal: simulates recursive directory traversal using expand (BFS).
      * Real implementation would use Files.list() wrapped in Flux.fromIterable.
      */
-    record FileNode(String path, List<String> children) {}
-
-    /** Returns the directory traversal. */
     public Flux<String> directoryTraversal() {
         FileNode root = new FileNode("/root", List.of("/root/a", "/root/b"));
         FileNode a    = new FileNode("/root/a", List.of());

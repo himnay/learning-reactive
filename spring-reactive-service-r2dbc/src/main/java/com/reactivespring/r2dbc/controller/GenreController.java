@@ -77,8 +77,8 @@ public class GenreController {
      * 409 instead of letting the constraint violation surface as a 500. The transaction has already
      * rolled back by the time this runs.
      */
-    @ExceptionHandler(DuplicateKeyException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(DuplicateKeyException.class)
     public Mono<String> handleDuplicateName(DuplicateKeyException ex) {
         return Mono.just("A genre with that name already exists");
     }

@@ -1,5 +1,6 @@
 package com.learnreactiveprogramming.service;
 
+import com.learnreactiveprogramming.model.FakeConnection;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
@@ -9,23 +10,6 @@ import reactor.core.publisher.SignalType;
  * (complete, error, or cancel).
  */
 public class ResourceOperators {
-
-    // Fake "connection" resource for demo purposes
-    record FakeConnection(String id) {
-        static Mono<FakeConnection> open() {
-            System.out.println("Opening connection");
-            return Mono.just(new FakeConnection("conn-" + System.nanoTime()));
-        }
-
-        Mono<Void> close() {
-            System.out.println("Closing connection: " + id);
-            return Mono.empty();
-        }
-
-        Mono<String> query(String sql) {
-            return Mono.just("result of: " + sql + " on " + id);
-        }
-    }
 
     /**
      * doFinally: runs a cleanup action on complete, error, AND cancel.

@@ -23,8 +23,8 @@ import java.time.Duration;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
         "movies.url.movieInfo=http://localhost:8084/v1/movieInfo",
         "movies.url.reviews=http://localhost:8084/v1/reviews"
