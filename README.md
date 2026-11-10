@@ -12,25 +12,36 @@ A production-grade, multi-module learning platform that explores every dimension
 2. 🧵 [Why Reactive Programming Exists](#2-why-reactive-programming-exists)
 3. 📨 [The Reactive Streams Specification](#3-the-reactive-streams-specification)
 4. 🧵 [Project Reactor — Mono and Flux](#4-project-reactor--mono-and-flux)
-5. 🏗️ [System Architecture](#5-system-architecture)
-6. 🏗️ [Module Breakdown](#6-module-breakdown)
-7. 🧰 [Technology Stack](#7-technology-stack)
-8. 🏗️ [Design Patterns in Use](#8-design-patterns-in-use)
-9. 🧵 [Spring WebFlux Deep Dive](#9-spring-webflux-deep-dive)
-10. 🔹 [Server-Sent Events and Sinks](#10-server-sent-events-and-sinks)
-11. 🧵 [WebClient — Reactive HTTP](#11-webclient--reactive-http)
-12. ☁️ [Spring Cloud Gateway](#12-spring-cloud-gateway)
-13. 🛡️ [Resilience Patterns](#13-resilience-patterns)
-14. 🗄️ [Reactive Persistence — MongoDB and R2DBC/PostgreSQL](#14-reactive-persistence--mongodb-and-r2dbcpostgresql)
-15. ⚡ [Reactive Caching with Redis](#15-reactive-caching-with-redis)
-16. 🧩 [Transactional Outbox Pattern](#16-transactional-outbox-pattern)
-17. 🧵 [Reactive WebSocket](#17-reactive-websocket)
-18. ⚠️ [Validation and Error Handling](#18-validation-and-error-handling)
-19. 🧪 [Testing Strategy](#19-testing-strategy)
-20. 📚 [API Reference](#20-api-reference)
-21. 🚀 [Running the Project](#21-running-the-project)
-22. 🧵 [Pros and Cons of Reactive Programming](#22-pros-and-cons-of-reactive-programming)
-23. 🔹 [Key Learning Takeaways](#23-key-learning-takeaways)
+5. 🔬 [Internals: Reactor Core 3.8](#reactor-internals)
+    - 5.1 [Package map](#reactor-internals-1)
+    - 5.2 [Design](#reactor-internals-2)
+    - 5.3 [Assembly, subscription, execution — sequence](#reactor-internals-3)
+    - 5.4 [Backpressure, prefetch and bounded queues](#reactor-internals-4)
+    - 5.5 [Threading: schedulers, `publishOn`, `subscribeOn`](#reactor-internals-5)
+    - 5.6 [How operators stay lock-free](#reactor-internals-6)
+    - 5.7 [Operator fusion](#reactor-internals-7)
+    - 5.8 [Sinks (hot sources used for SSE)](#reactor-internals-8)
+    - 5.9 [Debugging assembly](#reactor-internals-9)
+    - 5.10 [Design patterns and principles in Reactor](#reactor-internals-10)
+6. 🏗️ [System Architecture](#5-system-architecture)
+7. 🏗️ [Module Breakdown](#6-module-breakdown)
+8. 🧰 [Technology Stack](#7-technology-stack)
+9. 🏗️ [Design Patterns in Use](#8-design-patterns-in-use)
+10. 🧵 [Spring WebFlux Deep Dive](#9-spring-webflux-deep-dive)
+11. 🔹 [Server-Sent Events and Sinks](#10-server-sent-events-and-sinks)
+12. 🧵 [WebClient — Reactive HTTP](#11-webclient--reactive-http)
+13. ☁️ [Spring Cloud Gateway](#12-spring-cloud-gateway)
+14. 🛡️ [Resilience Patterns](#13-resilience-patterns)
+15. 🗄️ [Reactive Persistence — MongoDB and R2DBC/PostgreSQL](#14-reactive-persistence--mongodb-and-r2dbcpostgresql)
+16. ⚡ [Reactive Caching with Redis](#15-reactive-caching-with-redis)
+17. 🧩 [Transactional Outbox Pattern](#16-transactional-outbox-pattern)
+18. 🧵 [Reactive WebSocket](#17-reactive-websocket)
+19. ⚠️ [Validation and Error Handling](#18-validation-and-error-handling)
+20. 🧪 [Testing Strategy](#19-testing-strategy)
+21. 📚 [API Reference](#20-api-reference)
+22. 🚀 [Running the Project](#21-running-the-project)
+23. 🧵 [Pros and Cons of Reactive Programming](#22-pros-and-cons-of-reactive-programming)
+24. 🔹 [Key Learning Takeaways](#23-key-learning-takeaways)
 
 ---
 
@@ -51,7 +62,7 @@ learning-reactive/
 └── spring-reactive-gateway/              # Spring Cloud Gateway — CB, JWT auth, Redis rate limiting, canary routing
 ```
 
-Each module is a self-contained learning unit that builds on the previous one. Supporting infrastructure — MongoDB, Redis, and PostgreSQL — is provisioned by the root `docker-compose.yml` so the whole system can be brought up with a single command (see [§21 Running the Project](#21-running-the-project)).
+Each module is a self-contained learning unit that builds on the previous one. Supporting infrastructure — MongoDB, Redis, and PostgreSQL — is provisioned by the root `docker-compose.yml` so the whole system can be brought up with a single command (see [§22 Running the Project](#21-running-the-project)).
 
 ```mermaid
 flowchart TB
@@ -295,8 +306,219 @@ In Spring WebFlux, the framework subscribes on your behalf when you return a [`M
 
 ---
 
+<a id="reactor-internals"></a>
+
+## <span style="color:hsl(270,70%,62%)">5. 🔬 Internals: Reactor Core 3.8</span>
+
+Read from `reactor-core` 3.8.8 (the version Spring Boot 4.1.2 manages through `reactor-bom` 2025.0.8). The previous
+section shows *what* `Mono`/`Flux` do; this one shows *how*: three phases (assembly, subscription, execution), a
+request-driven protocol, and a few concurrency tricks that keep operators lock-free.
+
+<a id="reactor-internals-1"></a>
+
+### 5.1 Package map
+
+| Package | Key types | Job |
+|---|---|---|
+| `org.reactivestreams` (JDK `Flow` equivalent) | `Publisher`, `Subscriber`, `Subscription`, `Processor` | the 4-interface Reactive Streams contract |
+| `reactor.core` | `CorePublisher`, `CoreSubscriber`, `Fuseable` (+ `QueueSubscription`, `ConditionalSubscriber`, `ScalarCallable`), `Disposable`, `Scannable` | Reactor's extensions of the contract |
+| `reactor.core.publisher` | `Flux` (148 `Flux*` classes), `Mono` (118 `Mono*`), `InternalFluxOperator`, `Operators`, `Sinks`, `Hooks`, `ConnectableFlux` | the operators — one class per operator, e.g. `FluxMap` + `MapSubscriber` |
+| `reactor.core.scheduler` | `Schedulers`, `Scheduler`, `Worker`, `ParallelScheduler`, `BoundedElasticScheduler`, `SingleScheduler` | where work runs |
+| `reactor.util.concurrent` | `Queues` (`SMALL_BUFFER_SIZE` 256, `XS_BUFFER_SIZE` 32; SPSC/MPSC queues) | the bounded queues behind prefetch |
+| `reactor.util.context` | `Context`, `ContextView` | immutable per-subscription key/value map |
+
+<a id="reactor-internals-2"></a>
+
+### 5.2 Design
+
+```mermaid
+classDiagram
+    direction LR
+    class Publisher~T~ {
+        <<interface>>
+        subscribe(Subscriber)
+    }
+    class CorePublisher~T~ {
+        <<interface>>
+        subscribe(CoreSubscriber)
+    }
+    class Flux~T~ {
+        <<abstract>>
+        map() filter() flatMap() publishOn() ...
+    }
+    class InternalFluxOperator~I,O~ {
+        #Flux source
+        subscribeOrReturn(actual) CoreSubscriber
+    }
+    class FluxMap~T,R~ {
+        Function mapper
+    }
+    class MapSubscriber~T,R~ {
+        CoreSubscriber actual
+        Subscription s
+        onNext(t) → actual.onNext(mapper.apply(t))
+        request(n) → s.request(n)
+    }
+    class Subscription {
+        <<interface>>
+        request(long n)
+        cancel()
+    }
+    class CoreSubscriber~T~ {
+        <<interface>>
+        currentContext() Context
+    }
+    Publisher <|-- CorePublisher
+    CorePublisher <|.. Flux
+    Flux <|-- InternalFluxOperator
+    InternalFluxOperator <|-- FluxMap
+    FluxMap ..> MapSubscriber : creates per subscription
+    CoreSubscriber <|.. MapSubscriber
+    Subscription <|.. MapSubscriber
+    InternalFluxOperator --> Flux : source (upstream)
+```
+
+- ***An operator is two objects*** — a `Publisher` that remembers its `source` (built at ***assembly***), and a
+  `Subscriber`+`Subscription` pair created per ***subscription*** that sits between upstream and downstream.
+  `MapSubscriber` is both: downstream sees it as its `Subscription`, upstream as its `Subscriber`.
+- ***A pipeline is a linked list*** — `Flux.range(1,10).filter(…).map(…)` is
+  `FluxMap(source = FluxFilter(source = FluxRange))`. Nothing runs until `subscribe()`.
+
+<a id="reactor-internals-3"></a>
+
+### 5.3 Assembly, subscription, execution — sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant APP as your code
+    participant MAP as FluxMap
+    participant FIL as FluxFilter
+    participant RNG as FluxRange
+    participant S as final subscriber
+
+    Note over APP,RNG: 1. assembly — builds objects only
+    APP->>MAP: Flux.range(1,10).filter(odd).map(x10)
+    Note over APP,S: 2. subscription — travels upstream, wrapping subscribers
+    APP->>MAP: subscribe(S)
+    MAP->>FIL: subscribe(MapSubscriber(S))
+    FIL->>RNG: subscribe(FilterSubscriber(MapSubscriber))
+    RNG-->>S: onSubscribe(RangeSubscription) — passed down through each wrapper
+    Note over APP,S: 3. execution — demand up, data down
+    S->>RNG: request(n) (through MapSubscriber → FilterSubscriber)
+    RNG-->>S: onNext(1) → filter → map → onNext(10)
+    RNG-->>S: onNext(2) → filtered out → FilterSubscriber requests 1 more upstream
+    RNG-->>S: … onComplete()
+```
+
+- ***Demand flows up, data flows down*** — a publisher may emit at most what was `request`ed; that is the whole
+  backpressure mechanism. `subscribe(lambda)` requests `Long.MAX_VALUE` (unbounded).
+- ***Cold by default*** — each `subscribe()` builds a new subscriber chain and re-runs the source (a second HTTP call
+  with `WebClient`). `share()`, `publish().autoConnect()`, `cache()` and `Sinks` make it hot.
+- ***Context flows up too*** — `contextWrite(ctx)` decorates the subscriber, and operators above it read it via
+  `CoreSubscriber.currentContext()` — the reason `contextWrite` must come *below* the code that reads it.
+
+<a id="reactor-internals-4"></a>
+
+### 5.4 Backpressure, prefetch and bounded queues
+
+- ***Prefetch*** — async boundaries (`publishOn`, `flatMap` inner sources, `concatMap`) request a batch up front and
+  buffer it in a bounded queue from `Queues`: `flatMap` uses concurrency 256 and inner prefetch 32 by default
+  (`Queues.SMALL_BUFFER_SIZE` / `XS_BUFFER_SIZE`, tunable with `reactor.bufferSize.small` / `.x`).
+- ***Replenishing*** — after 75 % of a prefetch batch is consumed, the operator requests the next 75 %
+  (`Operators.unboundedOrLimit`: `prefetch - (prefetch >> 2)`); `limitRate(n)` exposes the same trick.
+- ***When the producer can't slow down*** (hot sources, `Flux.interval`, sinks): pick a strategy explicitly —
+  `onBackpressureBuffer(max, overflow)`, `onBackpressureDrop`, `onBackpressureLatest`, or fail with
+  `OverflowException`.
+
+<a id="reactor-internals-5"></a>
+
+### 5.5 Threading: schedulers, `publishOn`, `subscribeOn`
+
+| Scheduler | Threads | Use |
+|---|---|---|
+| `Schedulers.parallel()` | `reactor.schedulers.defaultPoolSize` = CPU count | CPU-bound work |
+| `Schedulers.boundedElastic()` | cap `10 × CPU` threads, `100 000` queued tasks per thread, idle TTL 60 s; on Java 21+ virtual threads if `reactor.schedulers.defaultBoundedElasticOnVirtualThreads=true` | wrapping ***blocking*** calls (JDBC, files, legacy clients) |
+| `Schedulers.single()` | 1 | serial, low-latency work |
+| `Schedulers.immediate()` | caller | no switch |
+| Reactor Netty event loop | ~CPU count, owned by the server/client | all WebFlux/WebClient I/O — never block here |
+
+- ***`publishOn(s)`*** changes the thread for everything ***below*** it (signals are re-emitted from a queue on a
+  `Worker` of `s`). ***`subscribeOn(s)`*** changes where the ***subscription*** (and therefore the source) starts;
+  position in the chain doesn't matter, and only the one closest to the source wins.
+- ***No threads of its own*** — without a scheduler operator, signals run on whatever thread called `onNext`
+  (Netty's event loop in WebFlux).
+
+<a id="reactor-internals-6"></a>
+
+### 5.6 How operators stay lock-free
+
+- ***Serial signals rule*** (Reactive Streams §1.3) — `onNext` calls must never overlap. Operators that merge
+  sources (`flatMap`, `publishOn`, `merge`) serialize with the ***queue-drain*** pattern: each producer enqueues,
+  then `if (WIP.getAndIncrement(this) == 0) drain()`; the one thread that won the increment drains for everyone
+  (`FluxPublishOn.PublishOnSubscriber`, `AtomicIntegerFieldUpdater WIP`). No locks, no thread is blocked.
+- ***Field updaters instead of `AtomicLong` objects*** — `requested`, `wip`, `s` are plain `volatile` fields
+  updated through static `Atomic*FieldUpdater`s: one object per operator instead of four.
+
+<a id="reactor-internals-7"></a>
+
+### 5.7 Operator fusion
+
+- ***Macro fusion (assembly time)*** — operators recognize their source and collapse: `Mono.just(x).map(f)` doesn't
+  build a full subscriber chain for a scalar (`ScalarCallable`), consecutive `map`s/`filter`s fold where possible.
+- ***Micro fusion (subscription time)*** — adjacent operators negotiate a mode through `Fuseable.QueueSubscription`:
+  `SYNC` (downstream pulls with `poll()` from the upstream's own queue, no `onNext`), `ASYNC` (upstream signals
+  "data available", downstream `poll()`s), `NONE`; `THREAD_BARRIER` vetoes fusion across a thread switch. Fusion
+  removes a queue and the per-item `onNext`/`request` overhead between, e.g., `range → map → publishOn`.
+
+<a id="reactor-internals-8"></a>
+
+### 5.8 Sinks (hot sources used for SSE)
+
+| Spec | Subscribers | Buffering |
+|---|---|---|
+| `Sinks.many().unicast()` | exactly one | buffers until it subscribes |
+| `Sinks.many().multicast().onBackpressureBuffer()` | many | buffers for the slowest, up to a limit |
+| `Sinks.many().multicast().directBestEffort()` | many | drops for slow subscribers |
+| `Sinks.many().replay().latest()` / `.all()` / `.limit(n)` | many | replays history to late subscribers |
+| `Sinks.one()`, `Sinks.empty()` | many | a single value / completion |
+
+- ***`tryEmitNext`*** returns an `EmitResult`: `OK`, `FAIL_TERMINATED`, `FAIL_OVERFLOW`, `FAIL_CANCELLED`,
+  `FAIL_NON_SERIALIZED` (two threads emitting at once — the sink detects it rather than corrupting state),
+  `FAIL_ZERO_SUBSCRIBER`. ***`emitNext(v, handler)`*** retries according to an `EmitFailureHandler`.
+
+<a id="reactor-internals-9"></a>
+
+### 5.9 Debugging assembly
+
+- ***`Hooks.onOperatorDebug()`*** — records a stack trace at every operator ***assembly*** so errors show where the
+  failing pipeline was built; expensive, dev only. ***`checkpoint("name")`*** does it for one spot.
+- ***`ReactorDebugAgent`*** (`reactor-tools`, used in this repo) — instruments bytecode at load time to get the same
+  assembly info cheaply.
+- ***`Hooks.enableAutomaticContextPropagation()`*** — bridges Reactor `Context` and `ThreadLocal`s (MDC, tracing)
+  through Micrometer `context-propagation`.
+
+<a id="reactor-internals-10"></a>
+
+### 5.10 Design patterns and principles in Reactor
+
+| Pattern / principle | Where | What it buys |
+|---|---|---|
+| ***Observer / Publish–Subscribe*** (with demand) | `Publisher`/`Subscriber`/`Subscription` | push-based data with pull-based flow control |
+| ***Decorator (operator chain)*** | every `InternalFluxOperator` wraps its source; every `*Subscriber` wraps `actual` | composable behaviour, one small class per operator |
+| ***Builder / fluent API*** | `Flux`/`Mono` instance methods returning new publishers; `Sinks.many().multicast()…` specs | readable pipelines; immutable intermediate objects |
+| ***Lazy evaluation*** | assembly vs subscription | build once, run per subscriber; nothing happens without demand |
+| ***Iterator, inverted*** | `poll()` in SYNC fusion vs `onNext` push | the fastest path chosen per pair of operators |
+| ***Queue-drain (work-in-progress counter)*** | `WIP` field updaters + `drain()` | serialized, lock-free signal delivery |
+| ***Strategy*** | `Scheduler` implementations, `EmitFailureHandler`, overflow strategies, `Queues` suppliers | swap threading and overflow behaviour |
+| ***Template Method*** | `InternalFluxOperator.subscribeOrReturn`, `BaseSubscriber.hookOnNext/hookOnError` | subclasses only fill in the per-signal logic |
+| ***Null object / singletons*** | `Operators.emptySubscription()`, `Flux.empty()`, `Context.empty()` | no null checks in hot paths |
+| ***Immutable context*** | `Context` `put` returns a new instance (`Context0`…`Context5`, `ContextN`) | safe sharing across threads without copying on read |
+| ***Hooks (interceptor / AOP-like)*** | `Hooks.onEachOperator`, `onLastOperator`, `onErrorDropped` | cross-cutting instrumentation (debug, metrics, tracing) |
+| ***Principles*** | Reactive Streams rules, ***non-blocking*** by contract, ***bounded*** everything (queues, demand), ***no thread ownership*** (schedulers are explicit) | predictable memory and threads under load |
+
 <a id="5-system-architecture"></a>
-## <span style="color:hsl(144,80%,58%)">5. 🏗️ System Architecture</span>
+## <span style="color:hsl(144,80%,58%)">6. 🏗️ System Architecture</span>
 
 ### <span style="color:hsl(281,80%,58%)">Runtime Topology</span>
 
@@ -375,7 +597,7 @@ Note that the two downstream calls in `MoviesController` are shown here as concu
 ---
 
 <a id="6-module-breakdown"></a>
-## <span style="color:hsl(196,80%,58%)">6. 🏗️ Module Breakdown</span>
+## <span style="color:hsl(196,80%,58%)">7. 🏗️ Module Breakdown</span>
 
 ### <span style="color:hsl(334,80%,58%)">Module 1: `non-spring-reactive-reactor-core`</span>
 
@@ -425,19 +647,19 @@ public record MovieInfoDocument(
 
 **Filtering:** `GET /v1/movieInfos?year=2023` and `GET /v1/movieInfos?name=Batman` are implemented by reading `@RequestParam Map<String, String> filterCriteria`. The key type must be [`String`][String] — Spring cannot auto-convert string query-param keys to enum types, so [`Map<EnumType, String>`][Map] always arrives empty.
 
-**SSE Stream:** `GET /v1/movieInfo/stream` returns real `text/event-stream` frames ([`ServerSentEvent<MovieInfoDocument>`][ServerSentEvent] with `id`/`event`/`data`), not raw JSON. A [`Sinks.Many<MovieInfoDocument>`][Sinks] configured as `replay().all()` means new SSE subscribers receive ALL past events (full replay) then live events. See [§10](#10-server-sent-events-and-sinks) for the wire-format detail and how it differs from the review service's NDJSON stream.
+**SSE Stream:** `GET /v1/movieInfo/stream` returns real `text/event-stream` frames ([`ServerSentEvent<MovieInfoDocument>`][ServerSentEvent] with `id`/`event`/`data`), not raw JSON. A [`Sinks.Many<MovieInfoDocument>`][Sinks] configured as `replay().all()` means new SSE subscribers receive ALL past events (full replay) then live events. See [§11](#10-server-sent-events-and-sinks) for the wire-format detail and how it differs from the review service's NDJSON stream.
 
 **Additional endpoints not shown above:** `POST /v1/movieInfo/batch` accepts a streaming [`Flux<MovieInfoDocument>`][Flux] request body for memory-efficient bulk inserts; `GET /v1/movieInfo/tailable` streams newly-inserted documents in real time via a MongoDB **tailable cursor** against a capped collection ([`@Tailable`][Tailable] on `MovieInfoRepository.findWithTailableCursorBy()`) — a different real-time mechanism from the `Sinks`-based SSE stream, driven by the database itself rather than an in-process sink; `GET /v1/movieInfo/summary` and `GET /v1/movieInfo/{id}/summary` return the `MovieSummary` projection described above; and `GET /v1/flux`, `/v1/mono`, `/v1/stream` are minimal `Flux`/[`Mono`][Mono]/infinite-`Flux.interval` demo endpoints kept from the original "hello reactive world" exercise.
 
-**Caveat:** `MovieInfoCacheService` (the Redis cache-aside component described in [§15](#15-reactive-caching-with-redis)) is a standalone [`@Service`][Service] — nothing in `MovieInfoController` or `MovieInfoServiceImpl` currently calls it, so reads always go straight to MongoDB. It demonstrates the cache-aside pattern in isolation, ready to be wired into `getMovieById`/`getAllMovies` as a follow-up exercise, but as shipped it is not yet on the live read path.
+**Caveat:** `MovieInfoCacheService` (the Redis cache-aside component described in [§16](#15-reactive-caching-with-redis)) is a standalone [`@Service`][Service] — nothing in `MovieInfoController` or `MovieInfoServiceImpl` currently calls it, so reads always go straight to MongoDB. It demonstrates the cache-aside pattern in isolation, ready to be wired into `getMovieById`/`getAllMovies` as a follow-up exercise, but as shipped it is not yet on the live read path.
 
 The info service is the most feature-dense module in the repo — beyond basic CRUD it also demonstrates four additional reactive patterns, each covered in depth in its own section later in this document:
 
 <ul>
 
-- **Reactive caching (cache-aside) with Redis** — `cache/MovieInfoCacheService` wraps a [`ReactiveRedisTemplate<String, MovieInfoDocument>`][ReactiveRedisTemplate] and implements a non-blocking cache-aside pattern (`get` → on miss, `loader` → `set` with a 10-minute TTL). See [§15](#15-reactive-caching-with-redis).
-- **Transactional Outbox pattern** — `outbox/OutboxService`, `OutboxEvent`, and `OutboxRepository` persist domain events as `PENDING` and relay them on a [`@Scheduled`][Scheduled] fixed-delay loop, avoiding the dual-write problem between the database and a message broker. See [§16](#16-transactional-outbox-pattern).
-- **Reactive WebSocket** — `websocket/MovieInfoWebSocketHandler` implements [`WebSocketHandler`][WebSocketHandler] directly (not SSE) using a multicast `Sinks.Many<String>` to broadcast every inbound client message to all connected sessions. See [§17](#17-reactive-websocket).
+- **Reactive caching (cache-aside) with Redis** — `cache/MovieInfoCacheService` wraps a [`ReactiveRedisTemplate<String, MovieInfoDocument>`][ReactiveRedisTemplate] and implements a non-blocking cache-aside pattern (`get` → on miss, `loader` → `set` with a 10-minute TTL). See [§16](#15-reactive-caching-with-redis).
+- **Transactional Outbox pattern** — `outbox/OutboxService`, `OutboxEvent`, and `OutboxRepository` persist domain events as `PENDING` and relay them on a [`@Scheduled`][Scheduled] fixed-delay loop, avoiding the dual-write problem between the database and a message broker. See [§17](#16-transactional-outbox-pattern).
+- **Reactive WebSocket** — `websocket/MovieInfoWebSocketHandler` implements [`WebSocketHandler`][WebSocketHandler] directly (not SSE) using a multicast `Sinks.Many<String>` to broadcast every inbound client message to all connected sessions. See [§18](#17-reactive-websocket).
 - **MongoDB field projections** — `projection/MovieInfoProjectionRepository` uses [`@Query(fields = ...)`][Query] to return a slim `MovieSummary` record instead of the full `MovieInfoDocument`, a lightweight CQRS-style read model for list views.
 - **Reactor Context → MDC bridging** — `util/ReactiveLogger` shows the correct (and only safe) way to get correlation data into SLF4J's `MDC` from a reactive pipeline: read it out of `Mono.deferContextual`, `MDC.put` synchronously, log, then `MDC.remove` in the same synchronous block — never leaving it set across a thread hop.
 
@@ -596,15 +818,15 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 ---
 
 <a id="7-technology-stack"></a>
-## <span style="color:hsl(79,80%,58%)">7. 🧰 Technology Stack</span>
+## <span style="color:hsl(79,80%,58%)">8. 🧰 Technology Stack</span>
 
 | Technology                   | Version                      | Role                                                                                                                 |
 |------------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| Java                         | 25                           | Runtime — records, sealed types, pattern matching                                                                    |
-| Spring Boot                  | 4.1.1                        | Auto-configuration, embedded Netty, Actuator (from the `super-pom` 1.2.0 parent, as of 2026)                         |
-| Spring Framework / WebFlux   | 7.0.9 (via Boot 4.1.1)       | Reactive web framework on Project Reactor                                                                            |
-| Project Reactor              | 3.8.7 (via Boot)             | Mono, Flux, Sinks, Schedulers                                                                                        |
-| Spring Cloud                 | 2025.1.3 (via learning-bom)  | BOM for `spring-cloud-starter-gateway-server-webflux` (5.0.3) and `spring-cloud-starter-circuitbreaker-reactor-resilience4j` |
+| Java                         | 27                           | Runtime — records, sealed types, pattern matching                                                                    |
+| Spring Boot                  | 4.1.2                        | Auto-configuration, embedded Netty, Actuator (from the `super-pom` 1.2.0 parent, as of 2026)                         |
+| Spring Framework / WebFlux   | 7.0.10 (via Boot 4.1.2)      | Reactive web framework on Project Reactor                                                                            |
+| Project Reactor              | 3.8.8 (via Boot)             | Mono, Flux, Sinks, Schedulers                                                                                        |
+| Spring Cloud                 | 2025.1.4 (via learning-bom)  | BOM for `spring-cloud-starter-gateway-server-webflux` (5.0.4) and `spring-cloud-starter-circuitbreaker-reactor-resilience4j` |
 | Spring Data Reactive MongoDB | via Boot                     | Non-blocking MongoDB driver (info + review services)                                                                 |
 | Spring Data R2DBC            | via Boot                     | Non-blocking relational driver (r2dbc service)                                                                       |
 | `r2dbc-postgresql`           | via Boot                     | Reactive PostgreSQL wire-protocol driver                                                                             |
@@ -623,7 +845,7 @@ Because JWT validation runs before rate limiting in the filter chain, authentica
 ---
 
 <a id="8-design-patterns-in-use"></a>
-## <span style="color:hsl(216,80%,58%)">8. 🏗️ Design Patterns in Use</span>
+## <span style="color:hsl(216,80%,58%)">9. 🏗️ Design Patterns in Use</span>
 
 ### <span style="color:hsl(354,80%,58%)">Publisher–Subscriber</span>
 
@@ -711,7 +933,7 @@ Both sets of routes are merged by Spring Cloud Gateway at startup.
 ---
 
 <a id="9-spring-webflux-deep-dive"></a>
-## <span style="color:hsl(14,80%,58%)">9. 🧵 Spring WebFlux Deep Dive</span>
+## <span style="color:hsl(14,80%,58%)">10. 🧵 Spring WebFlux Deep Dive</span>
 
 ### <span style="color:hsl(151,80%,58%)">The Two Programming Models</span>
 
@@ -782,7 +1004,7 @@ Mono.fromCallable(() -> legacyBlockingService.call())
 ---
 
 <a id="10-server-sent-events-and-sinks"></a>
-## <span style="color:hsl(119,80%,58%)">10. 🔹 Server-Sent Events and Sinks</span>
+## <span style="color:hsl(119,80%,58%)">11. 🔹 Server-Sent Events and Sinks</span>
 
 ### <span style="color:hsl(256,80%,58%)">What is SSE?</span>
 
@@ -844,7 +1066,7 @@ Both routes carry `order: -2`. The programmatic `/v1/movieInfo/**` and `/v1/revi
 ---
 
 <a id="11-webclient--reactive-http"></a>
-## <span style="color:hsl(86,80%,58%)">11. 🧵 WebClient — Reactive HTTP</span>
+## <span style="color:hsl(86,80%,58%)">12. 🧵 WebClient — Reactive HTTP</span>
 
 [`WebClient`][WebClient] is the reactive replacement for [`RestTemplate`][RestTemplate]. Every method in the fluent API returns a [`Mono`][Mono] or [`Flux`][Flux] — the HTTP call does not start until subscription.
 
@@ -907,7 +1129,7 @@ To see wiretap logs: set `logging.level.reactor.netty: DEBUG` in `application.ym
 ---
 
 <a id="12-spring-cloud-gateway"></a>
-## <span style="color:hsl(54,80%,50%)">12. ☁️ Spring Cloud Gateway</span>
+## <span style="color:hsl(54,80%,50%)">13. ☁️ Spring Cloud Gateway</span>
 
 ### <span style="color:hsl(191,80%,58%)">What the Gateway Does</span>
 
@@ -1074,7 +1296,7 @@ Two details worth calling out:
 <ul>
 
 - **[`@Order`][Order] arithmetic as documentation.** `RequestIdWebFilter` is `HIGHEST_PRECEDENCE + 1` and `JwtAuthenticationWebFilter` is `HIGHEST_PRECEDENCE + 10`; the gap leaves room to insert filters without renumbering. It has to be `+ 1`, not `- 1`: `HIGHEST_PRECEDENCE` is `Integer.MIN_VALUE`, so `- 1` overflows to `Integer.MAX_VALUE` and runs the filter last. `GlobalLoggingFilter`'s `HIGHEST_PRECEDENCE` orders it among the gateway's `GlobalFilter`s, a separate chain that starts after all `WebFilter`s.
-- **`.contextWrite(ctx -> ctx.put("requestId", requestId))`** puts the id into the *Reactor* [`Context`][Context], not just the HTTP header. Any operator further down the same reactive chain can retrieve it via [`Mono.deferContextual(ctx -> ...)`][Mono] even though it never touches the [`ServerWebExchange`][ServerWebExchange] directly — this is the same pattern `util/ReactiveLogger` in the info service uses to bridge Reactor `Context` into SLF4J `MDC` (see the [Module 2 breakdown](#module-2-spring-reactive-service-info) in §6).
+- **`.contextWrite(ctx -> ctx.put("requestId", requestId))`** puts the id into the *Reactor* [`Context`][Context], not just the HTTP header. Any operator further down the same reactive chain can retrieve it via [`Mono.deferContextual(ctx -> ...)`][Mono] even though it never touches the [`ServerWebExchange`][ServerWebExchange] directly — this is the same pattern `util/ReactiveLogger` in the info service uses to bridge Reactor `Context` into SLF4J `MDC` (see the [Module 2 breakdown](#module-2-spring-reactive-service-info) in §7).
 
 </ul>
 
@@ -1137,7 +1359,7 @@ The `Weight` predicate assigns each request a pseudo-random bucket at request ti
 ---
 
 <a id="13-resilience-patterns"></a>
-## <span style="color:hsl(42,80%,58%)">13. 🛡️ Resilience Patterns</span>
+## <span style="color:hsl(42,80%,58%)">14. 🛡️ Resilience Patterns</span>
 
 ### <span style="color:hsl(179,80%,58%)">Circuit Breaker States</span>
 
@@ -1213,7 +1435,7 @@ resilience4j:
 ---
 
 <a id="14-reactive-persistence--mongodb-and-r2dbcpostgresql"></a>
-## <span style="color:hsl(9,80%,58%)">14. 🗄️ Reactive Persistence — MongoDB and R2DBC/PostgreSQL</span>
+## <span style="color:hsl(9,80%,58%)">15. 🗄️ Reactive Persistence — MongoDB and R2DBC/PostgreSQL</span>
 
 ### <span style="color:hsl(147,80%,58%)">Why Reactive MongoDB</span>
 
@@ -1300,7 +1522,7 @@ Because the transaction context rides along in `Context` rather than a thread, `
 ---
 
 <a id="15-reactive-caching-with-redis"></a>
-## <span style="color:hsl(114,80%,58%)">15. ⚡ Reactive Caching with Redis</span>
+## <span style="color:hsl(114,80%,58%)">16. ⚡ Reactive Caching with Redis</span>
 
 ### <span style="color:hsl(252,80%,58%)">Cache-Aside, Non-Blocking End to End</span>
 
@@ -1356,7 +1578,7 @@ Cached entries expire automatically after a 10-minute TTL ([`Duration.ofMinutes(
 ---
 
 <a id="16-transactional-outbox-pattern"></a>
-## <span style="color:hsl(304,80%,58%)">16. 🧩 Transactional Outbox Pattern</span>
+## <span style="color:hsl(304,80%,58%)">17. 🧩 Transactional Outbox Pattern</span>
 
 ### <span style="color:hsl(82,80%,58%)">The Dual-Write Problem</span>
 
@@ -1407,11 +1629,11 @@ Because the outbox row is written to the *same* database as the domain data (not
 ---
 
 <a id="17-reactive-websocket"></a>
-## <span style="color:hsl(134,80%,58%)">17. 🧵 Reactive WebSocket</span>
+## <span style="color:hsl(134,80%,58%)">18. 🧵 Reactive WebSocket</span>
 
 ### <span style="color:hsl(272,80%,58%)">WebSocket vs. SSE</span>
 
-Both SSE and WebSocket keep a connection open without occupying a thread per connection, but they solve different problems. SSE (used by the info and review services' `/stream` endpoints, [§10](#10-server-sent-events-and-sinks)) is server-to-client only, built on plain HTTP, and reconnects automatically in the browser's `EventSource` API. WebSocket is bidirectional and requires an explicit protocol upgrade — the right choice when clients need to *send* messages over the same long-lived connection, not just receive them.
+Both SSE and WebSocket keep a connection open without occupying a thread per connection, but they solve different problems. SSE (used by the info and review services' `/stream` endpoints, [§11](#10-server-sent-events-and-sinks)) is server-to-client only, built on plain HTTP, and reconnects automatically in the browser's `EventSource` API. WebSocket is bidirectional and requires an explicit protocol upgrade — the right choice when clients need to *send* messages over the same long-lived connection, not just receive them.
 
 ### <span style="color:hsl(49,80%,50%)">`MovieInfoWebSocketHandler` — Broadcast Chat-Style Fan-Out</span>
 
@@ -1448,7 +1670,7 @@ flowchart LR
     Handler -- broadcast --> ClientB
 ```
 
-Every connected session shares one `messageSink`. When any client sends a message, `handle()`'s `receive` pipeline calls `messageSink.tryEmitNext(...)`, and *every* session's `send` pipeline (each subscribed to `messageSink.asFlux()`) re-emits it — including back to the sender. This is the same "shared hot publisher" idea used for SSE ([§10](#10-server-sent-events-and-sinks)), applied to a bidirectional protocol.
+Every connected session shares one `messageSink`. When any client sends a message, `handle()`'s `receive` pipeline calls `messageSink.tryEmitNext(...)`, and *every* session's `send` pipeline (each subscribed to `messageSink.asFlux()`) re-emits it — including back to the sender. This is the same "shared hot publisher" idea used for SSE ([§11](#10-server-sent-events-and-sinks)), applied to a bidirectional protocol.
 
 **Why [`Mono.zip(receive, send).then()`][Mono]:** `handle()` must return a single `Mono<Void>` that stays subscribed for the lifetime of the session. `receive` and `send` are two independent, concurrently-running pipelines — reading incoming frames and writing outgoing frames respectively — and neither should complete before the other. `Mono.zip` runs both and completes only once both complete (or cancels both the moment either errors or the session closes), which is exactly the lifecycle a WebSocket session needs.
 
@@ -1457,7 +1679,7 @@ Every connected session shares one `messageSink`. When any client sends a messag
 ---
 
 <a id="18-validation-and-error-handling"></a>
-## <span style="color:hsl(187,80%,58%)">18. ⚠️ Validation and Error Handling</span>
+## <span style="color:hsl(187,80%,58%)">19. ⚠️ Validation and Error Handling</span>
 
 ### <span style="color:hsl(324,80%,58%)">Bean Validation (`@RestController` style)</span>
 
@@ -1504,7 +1726,7 @@ repository.findById(id)
 ---
 
 <a id="19-testing-strategy"></a>
-## <span style="color:hsl(17,80%,58%)">19. 🧪 Testing Strategy</span>
+## <span style="color:hsl(17,80%,58%)">20. 🧪 Testing Strategy</span>
 
 ### <span style="color:hsl(154,80%,58%)">Layer 1: Unit Tests — Pure Reactor (`StepVerifier`)</span>
 
@@ -1593,7 +1815,7 @@ This tests the WebClient error handling, retry logic, and aggregation without ne
 ---
 
 <a id="20-api-reference"></a>
-## <span style="color:hsl(344,80%,58%)">20. 📚 API Reference</span>
+## <span style="color:hsl(344,80%,58%)">21. 📚 API Reference</span>
 
 ### <span style="color:hsl(122,80%,58%)">Gateway Entry Point: `http://localhost:8765`</span>
 
@@ -1618,7 +1840,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 | GET    | `/v1/movieInfo/summary`      | List — `MovieSummary` projection (id/name/year only)                            | —                          | `200 OK` array                                                                |
 | GET    | `/v1/movieInfo/{id}/summary` | Single — `MovieSummary` projection                                              | —                          | `200 OK` or empty                                                             |
 
-**Gateway routing note:** `/v1/movieInfo/stream` and `/v1/reviews/stream` go through the dedicated YAML routes (`order: -2`), which skip the circuit breaker and retry ([§10](#10-server-sent-events-and-sinks)); everything else under `/v1/movieInfo/**` and `/v1/reviews/**` takes the programmatic CB-guarded routes.
+**Gateway routing note:** `/v1/movieInfo/stream` and `/v1/reviews/stream` go through the dedicated YAML routes (`order: -2`), which skip the circuit breaker and retry ([§11](#10-server-sent-events-and-sinks)); everything else under `/v1/movieInfo/**` and `/v1/reviews/**` takes the programmatic CB-guarded routes.
 
 `MovieInfoDocument` schema:
 ```json
@@ -1713,7 +1935,7 @@ All requests go through the gateway. The gateway adds `X-Correlation-Id` to ever
 ---
 
 <a id="21-running-the-project"></a>
-## <span style="color:hsl(227,80%,58%)">21. 🚀 Running the Project</span>
+## <span style="color:hsl(227,80%,58%)">22. 🚀 Running the Project</span>
 
 ### <span style="color:hsl(4,80%,58%)">Prerequisites</span>
 
@@ -1773,7 +1995,7 @@ mvn clean test
 
 ### <span style="color:hsl(332,80%,58%)">Authenticating Through the Gateway</span>
 
-`JwtAuthenticationWebFilter` ([§12](#12-spring-cloud-gateway)) protects every gateway path except `/actuator/**`, `/fallback/**`, and `/v1/public/**` — any other request needs a valid `Authorization: Bearer <jwt>` header, or the gateway returns `401 Unauthorized` before the request ever reaches route matching. This codebase does not ship a `/login` endpoint that issues tokens (the gateway is a learning project focused on validation, not a full auth server), so for manual testing mint a token yourself with `TokenUtil`, using the same dev secret configured in `spring-reactive-gateway/src/main/resources/application.yml` (`security.jwt.secret`):
+`JwtAuthenticationWebFilter` ([§13](#12-spring-cloud-gateway)) protects every gateway path except `/actuator/**`, `/fallback/**`, and `/v1/public/**` — any other request needs a valid `Authorization: Bearer <jwt>` header, or the gateway returns `401 Unauthorized` before the request ever reaches route matching. This codebase does not ship a `/login` endpoint that issues tokens (the gateway is a learning project focused on validation, not a full auth server), so for manual testing mint a token yourself with `TokenUtil`, using the same dev secret configured in `spring-reactive-gateway/src/main/resources/application.yml` (`security.jwt.secret`):
 
 ```bash
 jshell --class-path "spring-reactive-gateway/target/classes:$(find ~/.m2 -name 'jjwt-*-0.13.0.jar' -o -name 'jackson-databind-*.jar' | tr '\n' ':')"
@@ -1839,7 +2061,7 @@ curl -s -X POST http://localhost:8083/v1/genres/batch \
 ---
 
 <a id="22-pros-and-cons-of-reactive-programming"></a>
-## <span style="color:hsl(162,80%,58%)">22. 🧵 Pros and Cons of Reactive Programming</span>
+## <span style="color:hsl(162,80%,58%)">23. 🧵 Pros and Cons of Reactive Programming</span>
 
 ### <span style="color:hsl(299,80%,58%)">Advantages</span>
 
@@ -1922,7 +2144,7 @@ Thread-local values (MDC logging context, Spring Security [`SecurityContextHolde
 ---
 
 <a id="23-key-learning-takeaways"></a>
-## <span style="color:hsl(352,80%,58%)">23. 🔹 Key Learning Takeaways</span>
+## <span style="color:hsl(352,80%,58%)">24. 🔹 Key Learning Takeaways</span>
 
 This project was built to cement specific reactive concepts through working code. The table below maps each concept to exactly where it lives in the codebase:
 
